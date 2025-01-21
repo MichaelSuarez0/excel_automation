@@ -18,6 +18,12 @@ from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.marker import Marker
 from enum import Enum
 
+class Color(Enum):
+    RED: str = "d81326"
+    BLUE: str = "3D7AD4"
+    DARK_BLUE: str = "12213b"
+    LIGHT_GRAY: str = "ebebe0"
+
 
 class ExcelOpenPyXL:
     script_dir = os.path.abspath(os.path.dirname(__file__))
@@ -55,6 +61,7 @@ class ExcelOpenPyXL:
     def dataframe_to_excel(self, df: pd.DataFrame, sheet_name='Hoja1', mode='w'):
         with pd.ExcelWriter(self.file_path, engine='openpyxl', mode=mode) as writer:
             df.to_excel(writer, sheet_name=sheet_name, index=False) # Pandas automatically saves
+
     
 class ExcelAutoChart(ExcelOpenPyXL):
     def __init__(self, file_path):
@@ -97,12 +104,32 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
         return selected_categories
 
-    def create_line_chart(self, output_file: str = "line_chart.xlsx", selected_labels: list[str] = None, marker = True) -> None:
-        """
-        Creates a line chart using selected rows of data.
+    # TODO: Get rid of None return type hint
+    def create_line_chart(
+        self,
+        selected_labels: list[str] | None = None,
+        output_file: str = "line_chart.xlsx",
+        marker: bool = True,
+    ) -> None:
+        """Creates a line chart using selected rows of data.
 
-        :param selected_labels: List of row labels to include in the chart (first column values).
-        :param output_file: The name of the output Excel file with the chart.
+        Parameters
+        ----------
+        selected_labels : list[str] | None, optional
+            A list of row labels (first column values) to include in the chart.
+            If None, all available categories are used, by default None.
+
+        output_file : str, optional
+            The name of the output Excel file containing the chart, by default "line_chart.xlsx".
+
+        marker : bool, optional
+            Whether to display markers on the line chart. If True, circular markers will be added to 
+            each data point, by default True.
+
+        Returns
+        -------
+        None
+            The function saves the Excel file with the generated chart.
         """
         self.open_workbook()
 
@@ -129,13 +156,13 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
             # Define color (red for first line, alternate red/blue for others)
             if idx == 0:
-                color_code = "d81326"
+                color_code = Color.RED.value
                 prstdash = "sysDash" 
             elif idx == 1:
-                color_code = "4472C4"
+                color_code = Color.BLUE.value
                 prstdash = "sysDot"  
             elif idx == 2:
-                color_code = "d81326"
+                color_code = Color.DARK_BLUE.value
                 prstdash = "solid"  
 
             # Define line properties
@@ -154,9 +181,6 @@ class ExcelAutoChart(ExcelOpenPyXL):
                 )
 
             chart.append(series)
-        
-        # define light gray color for gridlines (hex code)
-        light_gray = ColorChoice(srgbClr="ebebe0")
 
         # X-axis settings
         categories = Reference(self.ws, min_col=2, max_col=last_col, min_row=1, max_row=1)
@@ -177,8 +201,7 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.y_axis.tickLblPos = "low" # move labels closer to axis
         chart.y_axis.reverseOrder = True # Descendent order
         chart.y_axis.majorGridlines = ChartLines()
-        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=light_gray))  # Gray gridlines
-
+        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
 
         # Manual Layout for Chart Size & Position
         chart.layout = Layout(
@@ -200,12 +223,26 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
 
     # TODO: Set axis max and min range dynamically
-    def create_horizontal_bar_chart(self, output_file: str = "horizontal_bar.xlsx", selected_labels: list[str] = None) -> None:
-        """
-        Creates a bar chart using selected rows of data.
+    def create_horizontal_bar_chart(
+        self,
+        selected_labels: list[str] | None = None,
+        output_file: str = "horizontal_bar.xlsx",
+    ) -> None:
+        """Creates a horizontal bar chart using selected rows of data.
 
-        :param selected_labels: List of row labels to include in the chart (first column values).
-        :param output_file: The name of the output Excel file with the chart.
+        Parameters
+        ----------
+        selected_labels : list[str] | None, optional
+            A list of row labels (first column values) to include in the chart.
+            If None, all available categories are used, by default None.
+
+        output_file : str, optional
+            The name of the output Excel file containing the chart, by default "horizontal_bar.xlsx".
+
+        Returns
+        -------
+        None
+            The function saves the Excel file with the generated chart.
         """
         self.open_workbook()
 
@@ -237,12 +274,8 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.set_categories(categories)
 
         # Set all bars to the same color (e.g., blue)
-        color = "4472C4"  # Hex color (change as needed)
-        chart.series[0].graphicalProperties.solidFill = ColorChoice(srgbClr=color)
+        chart.series[0].graphicalProperties.solidFill = ColorChoice(srgbClr=Color.DARK_BLUE.value)
         #chart.series[0].graphicalProperties.ln = LineProperties(solidFill=ColorChoice(srgbClr=color))  # Border color
-        
-        # define light gray color (hex code)
-        light_gray = ColorChoice(srgbClr="ebebe0")
 
         # Y-axis settings
         chart.x_axis.delete = False  # ensure it's not hidden
@@ -251,7 +284,7 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.x_axis.minorTickMark = "out"  # ensure tick marks appear
         chart.x_axis.tickLblPos = "low"  # move labels to bottom
         # chart.x_axis.majorGridlines = ChartLines()
-        # chart.x_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=light_gray))  # Gray gridlines
+        # chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
         
         # X-axis settings
         chart.y_axis.delete = False  # ensure it's not hidden
@@ -261,7 +294,7 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.y_axis.tickLblPos = "low" # move labels closer to axis
         chart.y_axis.reverseOrder = True # Descendent order
         chart.y_axis.majorGridlines = ChartLines()
-        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=light_gray))  # Gray gridlines
+        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
 
 
         # Manual Layout for Chart Size & Position
@@ -283,12 +316,33 @@ class ExcelAutoChart(ExcelOpenPyXL):
         print(f"✅ Gráfico agregado a '{output_file}' con los datos seleccionados.")
 
 
-    def create_vertical_bar(self, output_file: str = "vertical_bar.xlsx", selected_labels: list[str] = None) -> None:
-        """
-        Creates a bar chart using selected rows of data.
+    def create_vertical_bar_chart(
+        self,
+        selected_labels: list[str] | None = None,
+        output_file: str = "vertical_bar.xlsx",
+        grouping: str = "standard",
+    ) -> None:
+        """Creates a vertical bar chart (stacked or grouped) using selected data rows.
 
-        :param selected_labels: List of row labels to include in the chart (first column values).
-        :param output_file: The name of the output Excel file with the chart.
+        Parameters
+        ----------
+        selected_labels : list[str] | None, optional
+            A list of row labels (first column values) to include in the chart.
+            If None, all available categories are used, by default None.
+
+        output_file : str, optional
+            The name of the output Excel file containing the chart, by default "vertical_bar.xlsx".
+
+        grouping : str, optional
+            The type of bar chart grouping (default standard). Options:
+            - "standard" : Side-by-side bars for each category.
+            - "stacked" : Stacked bars (sum of series per category).
+            - "percentStacked" : 100% stacked bars (proportions per category).
+
+        Returns
+        -------
+        None
+            The function saves the Excel file with the generated chart.
         """
         self.open_workbook()
 
@@ -301,17 +355,27 @@ class ExcelAutoChart(ExcelOpenPyXL):
         # Create the bar chart
         chart = BarChart()
         chart.title = "Porcentaje de Cobertura por Departamento" 
+        chart.overlap = 100 
         chart.style = 10  
         chart.width = 15  
         chart.height = 10 
+        if not grouping:
+            chart.grouping = "standard" # Stacked bar chart
+        else:
+            chart.grouping = grouping
 
         # Add each selected row as a separate data series
-        for row_number in selected_rows:
+        for idx, row_number in enumerate(selected_rows):
             data = Reference(self.ws, min_col=2, max_col=last_col, min_row=row_number, max_row=row_number)
             series = Series(data, title=self.ws.cell(row=row_number, column=1).value)
+            # Define line properties
+                # Alternar colores entre series
+            color_code = Color.DARK_BLUE.value if idx % 2 == 0 else Color.BLUE.value 
+
+            # Aplicar color de relleno a la serie (solo para gráficos de barras)
+            series.graphicalProperties.solidFill = ColorChoice(srgbClr=color_code)
             chart.append(series)
 
-        
         # X-axis settings
         categories = Reference(self.ws, min_col=2, max_col=last_col, min_row=1, max_row=1)
         chart.set_categories(categories) # Set X-axis categories from Row 1
@@ -319,25 +383,23 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.x_axis.title = None  # Remove X-axis title
         chart.x_axis.minorTickMark = "out"  # ensure tick marks appear
         chart.x_axis.tickLblPos = "low"  # move labels to bottom
-        
+
         # Y-axis settings
         chart.y_axis.delete = False  # ensure it's not hidden
         chart.y_axis.title = "Porcentaje (%)"
         chart.y_axis.scaling.max = 100 
+        chart.y_axis.scaling.min = 0
         chart.y_axis.number_format = "0"  # remove decimals
         chart.y_axis.tickLblPos = "low" # move labels closer to axis
 
         # Move legend to avoid overlap
         chart.legend.position = "b"  # Move legend to the bottom
 
-        # define light gray color (hex code)
-        light_gray = ColorChoice(srgbClr="ebebe0")
-
         # Apply gray gridlines
         chart.y_axis.majorGridlines = ChartLines()
-        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=light_gray))  # Gray gridlines
+        chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
         # chart.x_axis.majorGridlines = ChartLines()
-        # chart.x_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=light_gray))  # Gray gridlines
+        # chart.x_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
 
         # Manual Layout for Chart Size & Position
         chart.layout = Layout(
@@ -358,10 +420,10 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
 
 # Usage Example
-excel = ExcelOpenPyXL("prueba.xlsx")
-excel2 = ExcelOpenPyXL("Inmanejable inflación departamental.xlsx")
+excel = ExcelAutoChart("prueba.xlsx")
+excel2 = ExcelAutoChart("Inmanejable inflación departamental.xlsx")
 departamentos = ["Lima Metropolitana", "Cusco"]
 excel.create_line_chart(selected_labels=departamentos)
-#excel.create_vertical_bar(selected_labels=departamentos)
-#excel2.create_horizontal_bar()
+excel.create_vertical_bar_chart(selected_labels=departamentos, grouping="stacked")
+excel2.create_horizontal_bar_chart()
 
