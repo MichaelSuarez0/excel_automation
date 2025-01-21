@@ -18,11 +18,15 @@ from openpyxl.chart.layout import Layout, ManualLayout
 from openpyxl.chart.marker import Marker
 from enum import Enum
 
+
 class Color(Enum):
     RED: str = "d81326"
+    LIGHT_RED: str = "FFABAB"
+    LIGHT_BLUE: str = "A6CAEC"
     BLUE: str = "3D7AD4"
     DARK_BLUE: str = "12213b"
     LIGHT_GRAY: str = "ebebe0"
+    YELLOW: str = "FFC000"
 
 
 class ExcelOpenPyXL:
@@ -31,13 +35,30 @@ class ExcelOpenPyXL:
 
     def __init__(self, file_path):
         self.file_path = os.path.join(self.__class__.script_dir, "..", "data", file_path)
+        self.workbooks = {}  # Dictionary to store dynamically created workbooks (keys: names, values: Workbook objects)
+        self.wb_count = 1  # Counter to track new workbooks
         self.wb = None
         self.ws = None
     
     def open_workbook(self):
         self.wb = openpyxl.load_workbook(self.file_path)
         self.ws = self.wb.active
+    
+    def open_new_workbook(self):
+        """Dynamically create new workbooks and name them wb2, wb3, etc."""        
+        self.wb_count += 1  
+        
+        # Create new workbook and assign it dynamically
+        new_wb_name = f"wb{self.wb_count}"
+        self.workbooks[new_wb_name] = Workbook()
+        
+        # Create new variables dynamically (starting with .self)
+        setattr(self, new_wb_name, self.workbooks[new_wb_name])
+        setattr(self, f"ws{self.wb_count}", self.workbooks[new_wb_name].active)
 
+        print(f"✅ Created new workbook: {new_wb_name}")
+        return self.workbooks[new_wb_name], self.workbooks[new_wb_name].active
+    
     @property
     def sheet_names(self) -> list: 
         """Devuelve una lista de los nombres de las hojas."""
@@ -65,7 +86,7 @@ class ExcelOpenPyXL:
     
 class ExcelAutoChart(ExcelOpenPyXL):
     def __init__(self, file_path):
-        super().__init__(file_path)
+        super().__init__(file_path)    
     
     def _obtain_selected_categories(self, selected_labels: list[str] = None) -> list:
         """
@@ -103,6 +124,21 @@ class ExcelAutoChart(ExcelOpenPyXL):
             return
 
         return selected_categories
+    
+    def copy_selected_to_new_workbook(self, selected_rows: list, last_col: int) -> Workbook:
+        """Copies selected rows into a new workbook without blank spaces."""
+        new_wb, new_ws = self.open_new_workbook()
+        
+        # Copy headers (Row 1) to new sheet
+        for col in range(1, last_col + 1):
+            new_ws.cell(row=1, column=col, value=self.ws.cell(row=1, column=col).value)
+
+        # Copy selected rows without gaps
+        for idx, row_number in enumerate(selected_rows, start=2):
+            for col in range(1, last_col + 1):
+                new_ws.cell(row=idx, column=col, value=self.ws.cell(row=row_number, column=col).value)
+
+        return new_wb, new_ws
 
     # TODO: Get rid of None return type hint
     def create_line_chart(
@@ -139,6 +175,9 @@ class ExcelAutoChart(ExcelOpenPyXL):
         # Get the row numbers for selected labels
         selected_rows = self._obtain_selected_categories(selected_labels)
 
+        # Copy to new workbook
+        new_wb, new_ws = self.copy_selected_to_new_workbook(selected_rows, last_col)
+
         # Create the bar chart
         chart = LineChart()
         chart.title = "Porcentaje de Cobertura por Departamento" 
@@ -150,9 +189,9 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.graphical_properties.ln = LineProperties(noFill=True)  # Removes the chart border
 
         # Add each selected row as a separate data series with markers
-        for idx, row_number in enumerate(selected_rows):
-            data = Reference(self.ws, min_col=2, max_col=last_col, min_row=row_number, max_row=row_number)
-            series = Series(data, title=self.ws.cell(row=row_number, column=1).value)
+        for idx, row_idx in enumerate(range(2, len(selected_rows) + 2)):  # New rows start at 2 in `new_ws`
+            data = Reference(new_ws, min_col=2, max_col=last_col, min_row=row_idx, max_row=row_idx)
+            series = Series(data, title=new_ws.cell(row=row_idx, column=1).value)
 
             # Define color (red for first line, alternate red/blue for others)
             if idx == 0:
@@ -175,18 +214,16 @@ class ExcelAutoChart(ExcelOpenPyXL):
             if marker == True:
                 # Set marker (circle)
                 series.marker = Marker(symbol="circle")
-                series.marker.graphicalProperties.ln = LineProperties(solidFill=ColorChoice(srgbClr=color_code))  # Borde del marcador
-                series.marker.graphicalProperties = GraphicalProperties(
-                    solidFill=ColorChoice(srgbClr=color_code)  # Marker color matches line color
-                )
-
+                series.marker.graphicalProperties = GraphicalProperties(solidFill=ColorChoice(srgbClr=color_code))  # Marker color 
+                series.marker.graphicalProperties.ln = LineProperties(solidFill=ColorChoice(srgbClr=color_code))  # Marker border color
+    
             chart.append(series)
 
-        # X-axis settings
-        categories = Reference(self.ws, min_col=2, max_col=last_col, min_row=1, max_row=1)
-        chart.set_categories(categories) # Set X-axis categories from Row 1
+        # X-axis settings (years)
+        categories = Reference(new_ws, min_col=2, max_col=last_col, min_row=1, max_row=1) # Set X-axis categories from Row 1
+        chart.set_categories(categories) 
         chart.x_axis.delete = False  # ensure it's not hidden
-        chart.x_axis.title = None  # Remove X-axis title
+        chart.x_axis.title = None  
         #chart.x_axis.reverseOrder = True # Descendent order
         chart.x_axis.minorTickMark = "out"  # ensure tick marks appear
         chart.x_axis.tickLblPos = "low"  # move labels to bottom
@@ -215,10 +252,10 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
         # TODO: Obtain position dynamically
         # Place chart
-        self.ws.add_chart(chart, "P5") 
+        new_ws.add_chart(chart, "P5") 
 
         # Save changes
-        self.wb.save(os.path.join(self.__class__.save_dir, output_file))
+        new_wb.save(os.path.join(self.__class__.save_dir, output_file))
         print(f"✅ Gráfico agregado a '{output_file}' con los datos seleccionados.")
 
 
@@ -252,6 +289,9 @@ class ExcelAutoChart(ExcelOpenPyXL):
         # Get the row numbers for selected labels
         selected_rows = self._obtain_selected_categories(selected_labels)
 
+        # Copy to new workbook
+        new_wb, new_ws = self.copy_selected_to_new_workbook(selected_rows, last_col)
+
         # Create the bar chart
         chart = BarChart()
         chart.type = "bar"  # Horizontal bar chart
@@ -265,12 +305,12 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.graphical_properties.ln = LineProperties(noFill=True)  # Removes the chart border
 
         # Define data range (column 2 onward)
-        data = Reference(self.ws, min_col=2, max_col=last_col, min_row=2, max_row=selected_rows[-1])
+        data = Reference(new_ws, min_col=2, max_col=last_col, min_row=2, max_row=selected_rows[-1])
         series = Series(data, title="Valores")
         chart.append(series)
 
         # Define categories (column 1)
-        categories = Reference(self.ws, min_col=1, min_row=2, max_row=self.ws.max_row)
+        categories = Reference(new_ws, min_col=1, min_row=2, max_row=new_ws.max_row)
         chart.set_categories(categories)
 
         # Set all bars to the same color (e.g., blue)
@@ -296,7 +336,6 @@ class ExcelAutoChart(ExcelOpenPyXL):
         chart.y_axis.majorGridlines = ChartLines()
         chart.y_axis.majorGridlines.spPr = GraphicalProperties(ln=LineProperties(solidFill=Color.LIGHT_GRAY.value))  # Gray gridlines
 
-
         # Manual Layout for Chart Size & Position
         chart.layout = Layout(
             manualLayout=ManualLayout(
@@ -309,10 +348,10 @@ class ExcelAutoChart(ExcelOpenPyXL):
 
         # TODO: Obtain position dynamically
         # Place chart
-        self.ws.add_chart(chart, "P5") 
+        new_ws.add_chart(chart, "P5") 
 
         # Save changes
-        self.wb.save(os.path.join(self.__class__.save_dir, output_file))
+        new_wb.save(os.path.join(self.__class__.save_dir, output_file))
         print(f"✅ Gráfico agregado a '{output_file}' con los datos seleccionados.")
 
 
@@ -352,6 +391,9 @@ class ExcelAutoChart(ExcelOpenPyXL):
         # Get the row numbers for selected labels
         selected_rows = self._obtain_selected_categories(selected_labels)
 
+        # Copy to new workbook
+        new_wb, new_ws = self.copy_selected_to_new_workbook(selected_rows, last_col)
+
         # Create the bar chart
         chart = BarChart()
         chart.title = "Porcentaje de Cobertura por Departamento" 
@@ -364,12 +406,12 @@ class ExcelAutoChart(ExcelOpenPyXL):
         else:
             chart.grouping = grouping
 
-        # Add each selected row as a separate data series
-        for idx, row_number in enumerate(selected_rows):
-            data = Reference(self.ws, min_col=2, max_col=last_col, min_row=row_number, max_row=row_number)
-            series = Series(data, title=self.ws.cell(row=row_number, column=1).value)
-            # Define line properties
-                # Alternar colores entre series
+        # Add each selected row as a separate data series with markers
+        for idx, row_idx in enumerate(range(2, len(selected_rows) + 2)):  # New rows start at 2 in `new_ws`
+            data = Reference(new_ws, min_col=2, max_col=last_col, min_row=row_idx, max_row=row_idx)
+            series = Series(data, title=new_ws.cell(row=row_idx, column=1).value)
+            
+            # Alternate line colors
             color_code = Color.DARK_BLUE.value if idx % 2 == 0 else Color.BLUE.value 
 
             # Aplicar color de relleno a la serie (solo para gráficos de barras)
@@ -377,7 +419,7 @@ class ExcelAutoChart(ExcelOpenPyXL):
             chart.append(series)
 
         # X-axis settings
-        categories = Reference(self.ws, min_col=2, max_col=last_col, min_row=1, max_row=1)
+        categories = Reference(new_ws, min_col=2, max_col=last_col, min_row=1, max_row=1)
         chart.set_categories(categories) # Set X-axis categories from Row 1
         chart.x_axis.delete = False  # ensure it's not hidden
         chart.x_axis.title = None  # Remove X-axis title
@@ -412,10 +454,10 @@ class ExcelAutoChart(ExcelOpenPyXL):
         )
 
         # Place chart
-        self.ws.add_chart(chart, "P5") 
+        new_ws.add_chart(chart, "P5") 
 
         # Save changes
-        self.wb.save(os.path.join(self.__class__.save_dir, output_file))
+        new_wb.save(os.path.join(self.__class__.save_dir, output_file))
         print(f"✅ Gráfico agregado a '{output_file}' con los datos seleccionados.")
 
 
@@ -423,7 +465,7 @@ class ExcelAutoChart(ExcelOpenPyXL):
 excel = ExcelAutoChart("prueba.xlsx")
 excel2 = ExcelAutoChart("Inmanejable inflación departamental.xlsx")
 departamentos = ["Lima Metropolitana", "Cusco"]
-excel.create_line_chart(selected_labels=departamentos)
-excel.create_vertical_bar_chart(selected_labels=departamentos, grouping="stacked")
-excel2.create_horizontal_bar_chart()
+#excel.create_line_chart(selected_labels=departamentos, output_file="line_chart_v2.xlsx")
+excel.create_vertical_bar_chart(selected_labels=departamentos, grouping="stacked", output_file="vertical_bar_v2.xlsx")
+#excel2.create_horizontal_bar_chart(output_file="horizontal_bar_v2.xlsx")
 
