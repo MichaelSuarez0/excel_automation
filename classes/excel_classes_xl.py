@@ -19,10 +19,10 @@ from xlsxwriter.utility import xl_range
 
 # Hex colors
 class Color(Enum):
-    RED: str = "#d81326"
+    RED: str = "#C80000"
     RED_LIGHT: str = "#FFABAB"
     BLUE_LIGHT: str = "#A6CAEC"
-    BLUE: str = "#2E70D0"
+    BLUE: str = "#3B79D5"
     BLUE_DARK: str = "#12213b"
     GREEN_DARK: str = "#008E2C"
     GRAY_LIGHT: str = "#ebebeb"
@@ -36,14 +36,15 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 macros_folder = os.path.join(script_dir, "..", "macros", "excel")
 save_dir = os.path.join(script_dir, "..", "charts")
 
-class ExcelHandler():
+class ExcelDataExtractor():
     def __init__(self, file_name: str, output_name: str):
-        """Class for automating Excel files
+        """Class to obtain data from an Excel file, convert to DataFrame, apply transformations, and export it. 
+        Engine: mostly pandas
 
         Parameters
         ----------
         file_name : str
-                The name of the Excel file to be created or loaded.
+                The name of the Excel file to be loaded (from databases folder)
         """
         self.file_path = os.path.join(script_dir, "..", "databases", f'{file_name}.xlsx')
         self.output_path = os.path.join(script_dir, "..", "charts", f'{output_name}.xlsx')
@@ -99,6 +100,21 @@ class ExcelHandler():
         print(f'The workbook has {count} sheets.')
         return count
     
+    # Opening methods
+    def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
+        """Reads sheet and return a DataFrame, may specify worksheet index"""
+        sheet_name = self.wb.sheetnames[sheet_index] if sheet_index else self.wb.sheetnames[0]
+        df = pd.read_excel(self.file_path, sheet_name)
+        return df
+    
+    def worksheets_to_dataframes(self, include_first = False) -> list[pd.DataFrame]:
+        """Reads all sheets at once and returns a list of DataFrames, may specify to skip first"""
+        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This method reads all sheets at once a returns a dictionary of DataFrames
+        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
+        dfs = [dfs_dict[name] for name in sheet_names]
+        return dfs
+    
+    # Transformation methods
     def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> list[pd.DataFrame]:
         """Normalizes the orientation of all DataFrames. Converts to list if a single df is provided"""
         if not isinstance(dfs, (pd.DataFrame, list)):
@@ -138,21 +154,8 @@ class ExcelHandler():
         #ic(filtered_df)
 
         return filtered_df
-
-    # Writing methods
-    def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
-        """Reads sheet and return a DataFrame, may specify worksheet index"""
-        sheet_name = self.wb.sheetnames[sheet_index] if sheet_index else self.wb.sheetnames[0]
-        df = pd.read_excel(self.file_path, sheet_name)
-        return df
     
-    def worksheets_to_dataframes(self, include_first = False) -> list[pd.DataFrame]:
-        """Reads all sheets at once and returns a list of DataFrames, may specify to skip first"""
-        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This method reads all sheets at once a returns a dictionary of DataFrames
-        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
-        dfs = [dfs_dict[name] for name in sheet_names]
-        return dfs
-    
+    # Writing methods (simple)
     def dataframe_to_worksheet(self, df: pd.DataFrame, sheet_name: str = 'Hoja1', mode: str = 'w') -> None:
         """Writes a DataFrame to a worksheet in the Excel file.
 
@@ -202,7 +205,8 @@ class ExcelHandler():
 
 class ExcelFormatter:
     def __init__(self, workbook: Workbook | None, file_name: str = ""):
-        """Class for formatting Excel files.
+        """Class to open Excel files and apply beautiful format. 
+        Engine: openpyxl
 
         Parameters
         ----------
@@ -255,14 +259,22 @@ class ExcelFormatter:
 # TODO: Reducir el chart area, chart layout
 class ExcelAutoChart:
     def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart"):
+        """Class to write to Excel files from DataFrames and creating charts. Engine: xlsxwriter
+
+        Parameters
+        ----------
+            df_list (list[pd.DataFrame]): Data that will be written to Excel
+            output_name (str, optional): File name for the output file. Defaults to "ExcelAutoChart".
+        """
         self.writer = pd.ExcelWriter(os.path.join(save_dir, f'{output_name}.xlsx'), engine='xlsxwriter')
         self.workbook: Workbook = self.writer.book
         self.df_list = df_list
         self._initialize_chart_formats()
 
+    # TODO: Merge with _create_base_chart
     def _initialize_chart_formats(self):
         """Predefine chart-specific formats using the Color enum"""
-        color_list = [Color.RED.value, Color.BLUE.value, Color.GREEN_DARK.value, Color.ORANGE.value]
+        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         self.chart_formats = {
             'line': {
                 'colors': color_list,
@@ -275,18 +287,29 @@ class ExcelAutoChart:
             }
         }
 
-    def _write_to_excel(
-        self,
-        df: pd.DataFrame,
-        sheet_name: str = "ChartData"
-    ) -> Tuple[pd.DataFrame, Worksheet]:
+    def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData") -> Tuple[pd.DataFrame, Worksheet]:
         """Process source data and prepare worksheet for charting"""
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
-
-        # Get the worksheet and close the writer
         worksheet = self.writer.sheets[sheet_name]
         return df, worksheet
+    
+    def _create_base_chart(self, worksheet: Worksheet, chart_type: str):
+        """Default settings for all chart types"""
+        chart = self.workbook.add_chart({'type': chart_type})
 
+        chart.set_size({'width': 600, 'height': 420})
+        chart.set_legend({'position': 'bottom'})
+        chart.set_plotarea({
+            'layout': {
+                'x':      0.11,
+                'y':      0.10,
+                'width':  0.83,
+                'height': 0.75,
+            }
+        })
+        chart.set_chartarea({'border': {'none': True}})
+
+         
     def create_line_chart(
         self,
         index: int = 0,
@@ -294,18 +317,22 @@ class ExcelAutoChart:
         marker: bool = True
     ) -> Worksheet:
         """Generate line chart with color scheme from Color enum"""
+        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
         
         # Check if the DataFrame is empty
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
+        
+        chart = self._create_base_chart(worksheet, 'line')
 
-        chart = self.workbook.add_chart({'type': 'line'})
+        # Uncomment for IntelliSense
+        #chart = self.workbook.add_chart({'type': 'line'})
         
         # Configure chart appearance
-        chart.set_title({'name': 'Performance Over Time', 'name_font': {'size': 14}})
-        chart.set_size({'width': 600, 'height': 400})
-        chart.set_legend({'position': 'bottom'})
+        # chart.set_title({'name': 'Performance Over Time', 'name_font': {'size': 14}})
+        # chart.set_size({'width': 600, 'height': 420})
+        # chart.set_legend({'position': 'bottom'})
 
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]):
@@ -356,11 +383,94 @@ class ExcelAutoChart:
         
         self.writer.close()  # Automatically saves
         return worksheet
+    
+    def create_bar_chart(
+        self,
+        index: int = 0,
+        sheet_name: str = "BarChart",
+        grouping: str = "standard"
+    ) -> Worksheet:
+        """Generate vertical bar chart with color scheme from Color enum"""
+        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
+        data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
+        
+        # Check if DataFrame is empty
+        if data_df.empty:
+            raise ValueError("DataFrame is empty. No data to plot.")
+
+        # Map grouping types to xlsxwriter subtypes
+        subtype_map = {
+            'standard': 'clustered',
+            'stacked': 'stacked',
+            'percentStacked': 'percent_stacked'
+        }
+        subtype = subtype_map.get(grouping, 'clustered')
+
+        # Create column chart (vertical bars)
+        chart = self.workbook.add_chart({'type': 'column', 'subtype': subtype})
+        
+        # Configure chart appearance
+        #chart.set_title({'name': 'Coverage Percentage by Department', 'name_font': {'size': 14}})
+        chart.set_size({'width': 600, 'height': 380})
+        chart.set_legend({'position': 'bottom'})
+
+        # Get colors from predefined formats
+        colors = self.chart_formats['line']['colors']
+
+        # Add data series with color scheme
+        for idx, col in enumerate(data_df.columns[1:]):
+            col_idx = idx + 1  # Skip first column (categories)
+            color = colors[idx % len(colors)] # are cycled through the predefined list of colors (colors), even if there are more series than colors.
+
+            series_params = {
+                'name': [sheet_name, 0, col_idx],  # Header row
+                'categories': [sheet_name, 1, 0, len(data_df), 0],  # First column data
+                'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  # Value columns
+                'fill': {'color': color},
+            }
+
+            chart.add_series(series_params)
+
+        # Y-axis configuration
+        chart.set_y_axis({
+            'name': 'Percentage (%)',
+            'num_format': '0',  # No decimals
+            'max': 100,
+            'min': 0,
+            'major_gridlines': {
+                'visible': True,
+                'line': {'color': Color.GRAY_LIGHT.value}
+            }
+        })
+
+        # X-axis configuration
+        chart.set_x_axis({
+            'name': '',
+            'text_axis': True,  # Treat as text categories
+            'num_format': '@',  # Text format
+        })
+
+        # chart.set_plotarea({
+        #     'layout': {
+        #         'x':      0.11,
+        #         'y':      0.10,
+        #         'width':  0.83,
+        #         'height': 0.75,
+        #     }
+        # })
+
+        # chart.set_chartarea({'border': {'none': True}})
+
+        # Insert chart with proper positioning
+        worksheet.insert_chart('E2', chart, {'x_offset': 25, 'y_offset': 10})
+        
+        self.writer.close()  # Save and close workbook
+        return worksheet
 
 
 # class ExcelAutomation:
 #     def __init__(self, file_name: str):
-#         """Class for automating Excel tasks.
+#         """Class for automating Excel-related tasks.
 
 #         Parameters
 #         ----------
