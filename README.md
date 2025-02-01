@@ -1,7 +1,7 @@
-# Microsoft Office Automation
+# Excel
 
-Python-based scripts designed to automate tasks with Microsoft Office applications, especially Excel.
-Provides reusable functions to create elegantly formatted charts and export their data to different Excel sheets.
+Python-based scripts designed to automate Excel-related tasks.
+Provides reusable functions to convert Excel data into DataFrames, export to different Excel files and create elegantly formatted charts.
 
 ---
 
@@ -14,15 +14,11 @@ Provides reusable functions to create elegantly formatted charts and export thei
 
 ## Features
 
-- **Excel Automation**:  
+- **Excel Automation**:
+  - Built with class composition in mind. 
   - Read, write, and manipulate Excel files.
   - Generate formatted charts (line charts and bar charts)
   - Export data to a new Excel sheet with an elegant format
-- **Word Automation**:  
-  - Divide documents based on headers.
-  - Join documents and integrate them with a template
-
----
 
 ## Structure
 
@@ -32,23 +28,24 @@ The repository is organized as follows:
 microsoft_office_automation/
 ├── charts/                      # Directory for generated charts
 │
-├── classes/                     # Core classes for handling Office automation
-│   ├── excel_classes.py         # Excel automation classes
-│   └── word_classes.py          # Word automation classes
+├── classes/                     
+│   ├── excel_automation.py      # Core class 
+│   └── excel_data_extractor.py  # Pandas-based class for basic ETL functions withing Excel.
+│   └── excel_formatter.py       # Openpyxl-based class for applying format to existing Excel files.
+│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with a list of DataFrames.
 │
-├── databases/                   # Folder for storing database files
+├── databases/                   # Folder for storing simple databases (in Excel)
 │
 ├── macros/                      # Macros for Office applications
 │
-├── scripts/                     # Scripts to interact with applications
+├── scripts/                     
 │   ├── chart_creator.py         # Script for creating charts in Excel
+│   └── report_creator.py
 │
 ├── .gitignore                   
 ├── LICENSE                      
 ├── README.md                    
 ```
-
----
 
 ### Usage
 
