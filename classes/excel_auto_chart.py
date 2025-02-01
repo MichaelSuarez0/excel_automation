@@ -6,6 +6,7 @@ from xlsxwriter.format import Format
 from xlsxwriter.utility import xl_range
 from microsoft_office_automation.classes.colors import Color
 from typing import Tuple, Optional
+import numpy as np
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "charts")
@@ -19,17 +20,20 @@ class ExcelAutoChart:
 
         Parameters
         ----------
-            df_list (list[pd.DataFrame]): Data that will be written to Excel
-            output_name (str, optional): File name for the output file. Defaults to "ExcelAutoChart".
+        df_list : list(pd.DataFrame):
+            Data that will be written to Excel
+        output_name : str, optional: 
+            File name for the output file. Defaults to "ExcelAutoChart".
         """
+        self.output_name = output_name
         self.writer = pd.ExcelWriter(os.path.join(save_dir, f'{output_name}.xlsx'), engine='xlsxwriter')
         self.workbook: Workbook = self.writer.book
         self.df_list = df_list
+        self.sheet_dfs = {}  
         self._initialize_chart_formats()
+        self._initialize_cell_formats()
 
-    # TODO: Merge with _create_base_chart
     def _initialize_chart_formats(self):
-        """Predefine chart-specific formats using the Color enum"""
         color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         self.chart_formats = {
             'line': {
@@ -43,11 +47,89 @@ class ExcelAutoChart:
             }
         }
 
+    def _initialize_cell_formats(self):
+        """Crea formatos de celdas para encabezados, primera columna, números y fechas."""
+        self.header_format = self.workbook.add_format({
+            'bg_color': Color.BLUE_DARK.value,
+            'font_color': Color.WHITE.value,
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            'border': 1,
+            'border_color': Color.WHITE.value,
+        })
+        self.first_column_format = self.workbook.add_format({
+            'bg_color': Color.GRAY_LIGHT.value,
+            'border': 1,
+            'border_color': Color.WHITE.value,
+        })
+        self.number_format = self.workbook.add_format({
+            'num_format': '0.00',
+            'border': 1,
+            'border_color': Color.GRAY_LIGHT.value,
+        })
+        self.integer_format = self.workbook.add_format({
+            'num_format': '0',
+            'border': 1,
+            'border_color': Color.GRAY_LIGHT.value,
+        })
+        self.date_format = self.workbook.add_format({
+            'num_format': 'mmm-yy',
+            'border': 1,
+            'border_color': Color.WHITE.value,
+            'bg_color': Color.GRAY_LIGHT.value,
+        })
+
     def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData") -> Tuple[pd.DataFrame, Worksheet]:
-        """Process source data and prepare worksheet for charting"""
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
         worksheet = self.writer.sheets[sheet_name]
+        self.sheet_dfs[sheet_name] = df
+        self._apply_formatting_to_worksheet(worksheet, df)
         return df, worksheet
+
+    def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame):
+        """Applies formatting only to cells with data."""
+        # Set column widths
+        worksheet.set_column('A:A', 15)
+        if len(df.columns) > 1:
+            worksheet.set_column(1, len(df.columns) - 1, 10)
+
+        # Hide gridlines
+        worksheet.hide_gridlines(2)
+
+        # Determine format for the first column
+        first_col = df.columns[0]
+        if pd.api.types.is_datetime64_any_dtype(df[first_col]):
+            first_col_fmt = self.date_format
+        else:
+            first_col_fmt = self.first_column_format
+
+        # Write headers with header format
+        for col_num, col_name in enumerate(df.columns):
+            worksheet.write(0, col_num, col_name, self.header_format)
+
+        # Write data cells with appropriate formats
+        for row_idx in range(df.shape[0]):
+            # First column (e.g., dates or text)
+            cell_value = df.iloc[row_idx, 0]
+            worksheet.write(row_idx + 1, 0, cell_value, first_col_fmt)
+
+            # Other columns (numeric data)
+            for col_idx in range(1, df.shape[1]):
+                cell_value = df.iloc[row_idx, col_idx]
+                dtype = df.dtypes.iloc[col_idx]  # Use .iloc for positional indexing
+
+                # Skip NaN/Inf values by checking if the value is NaN or Inf
+                if pd.isna(cell_value) or np.isinf(cell_value):
+                    worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
+
+                else:
+                    if np.issubdtype(dtype, np.floating):
+                        fmt = self.number_format
+                    else:
+                        fmt = self.integer_format
+
+                    worksheet.write(row_idx + 1, col_idx, cell_value, fmt)
     
     # TODO: Explicitly call title = ""
     # TODO: Add param for legend and adjust height if not legend
@@ -153,14 +235,37 @@ class ExcelAutoChart:
         print(f"✅ Gráfico de líneas agregado a la hoja {index + 1}")
         return worksheet
     
-         
+    # TODO: Ordenar por secciones     
     def create_bar_chart(
         self,
         index: int = 0,
         sheet_name: str = "BarChart",
-        grouping: str = "standard"
+        grouping: str = "standard",
+        chart_type: str = "column"  # "column" (vertical) o "bar" (horizontal)
     ) -> Worksheet:
-        """Generate vertical bar chart with color scheme from Color enum"""
+        """Generate a bar or column chart in Excel from a DataFrame.
+
+        Parameters
+        ----------
+        index : int, optional
+            Index of the DataFrame in df_list to use (default is 0).
+        sheet_name : str, optional
+            Name of the worksheet (default is "BarChart").
+        grouping : str, optional
+            Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
+        chart_type : str, optional
+            Type of chart to create: "column" for vertical or "bar" for horizontal (default is "column").
+
+        Returns
+        -------
+        Worksheet
+            The worksheet with the inserted chart.
+
+        Raises
+        ------
+        ValueError
+            If the DataFrame is empty or if an invalid chart_type is provided.
+        """
         color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
 
@@ -178,48 +283,72 @@ class ExcelAutoChart:
         }
         subtype = subtype_map.get(grouping, 'clustered')
 
-        # Create column chart (vertical bars)
-        chart = self._create_base_chart(worksheet, 'column', subtype)
+        # Validate chart type
+        if chart_type not in {"column", "bar"}:
+            raise ValueError("Invalid chart_type. Use 'column' (vertical) or 'bar' (horizontal).")
 
-        # Get colors from predefined formats
+        # Predefined formats
+        chart = self._create_base_chart(worksheet, chart_type, subtype)
         colors = self.chart_formats['line']['colors']
 
         # Add data series with color scheme
-        for idx, col in enumerate(data_df.columns[1:]):
-            col_idx = idx + 1  # Skip first column (categories)
-            color = colors[idx % len(colors)] 
+        if chart_type == "column":
+            for idx, col in enumerate(data_df.columns[1:]):
+                col_idx = idx + 1  # Saltamos la primera columna (categorías)
+                color = colors[idx % len(colors)]
+                
+                series_params = {
+                    'name': [sheet_name, 0, col_idx],         
+                    'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
+                    'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
+                    'fill': {'color': color},
+                    'data_labels': {
+                        'value': True,
+                        'position': 'outside_end',
+                        'num_format': num_format
+                    },
+                }
+                chart.add_series(series_params)
+                
+        elif chart_type == "bar":
+            for row_idx in range(1, len(data_df) + 1):  
+                color = colors[(row_idx - 1) % len(colors)]
+                
+                series_params = {
+                    'name': [sheet_name, row_idx, 0],  
+                    'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
+                    'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1],  
+                    'fill': {'color': color},
+                    'data_labels': {
+                        'value': True,
+                        'position': 'outside_end',
+                        'num_format': num_format
+                    },
+                }
+                chart.add_series(series_params)
+            
+        # TODO: Consider convertion to dataclasses
+        # Configure axes
+        if chart_type == "column":
+            chart.set_y_axis({
+                'name': 'Percentage (%)',
+                'num_format': '0',
+                'max': 100,
+                'min': 0,
+                'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
+            })
+            chart.set_x_axis({'name': '', 'text_axis': True, 'num_format': '@'})
 
-            series_params = {
-                'name': [sheet_name, 0, col_idx],  # Header row
-                'categories': [sheet_name, 1, 0, len(data_df), 0],  
-                'values': [sheet_name, 1, col_idx, len(data_df), col_idx], 
-                'fill': {'color': color},
-                'data_labels': {
-                    'value': True,
-                    'position': 'outside_end',
-                    'num_format': num_format},
-            }
-
-            chart.add_series(series_params)
-
-        # Y-axis configuration
-        chart.set_y_axis({
-            'name': 'Percentage (%)',
-            'num_format': '0',  # No decimals
-            'max': 100,
-            'min': 0,
-            'major_gridlines': {
-                'visible': True,
-                'line': {'color': Color.GRAY_LIGHT.value}
-            }
-        })
-
-        # X-axis configuration
-        chart.set_x_axis({
-            'name': '',
-            'text_axis': True,  # Treat as text categories
-            'num_format': '@',  # Text format
-        })
+        elif chart_type == "bar":
+            chart.set_legend({'none': True})
+            chart.set_x_axis({
+                'name': 'Percentage (%)',
+                'num_format': '0',
+                'max': 100,
+                'min': 0,
+                'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
+            })
+            chart.set_y_axis({'name': '', 'text_axis': True, 'num_format': '@'})
 
         # Insert chart with proper positioning
         position = 'E3' if len(data_df.columns[1:]) < 4 else 'J3'
@@ -228,6 +357,7 @@ class ExcelAutoChart:
         #self.writer.close()  # Save and close workbook
         print(f"✅ Gráfico de barras agregado a la hoja {index + 1}")
         return worksheet
-    
+        
     def save_workbook(self):
-        return self.writer.close()
+        self.writer.close()
+        print(f'✅ Excel guardado como "{self.output_name}"')
