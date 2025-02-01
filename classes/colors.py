@@ -13,3 +13,8 @@ class Color(Enum):
     YELLOW: str = "#FFC000"
     WHITE: str = '#FFFFFF'
     ORANGE: str = "#DD6909"
+
+    @property
+    def no_hash(self):
+        return self.value.lstrip("#")
+    

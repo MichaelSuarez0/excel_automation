@@ -3,8 +3,6 @@
 Python-based scripts designed to automate Excel-related tasks.
 Provides reusable functions to convert Excel data into DataFrames, export to different Excel files and create elegantly formatted charts.
 
----
-
 ## Table of Contents
 
 1. [Features](#features)  
@@ -25,22 +23,23 @@ Provides reusable functions to convert Excel data into DataFrames, export to dif
 The repository is organized as follows:
 
 ```plaintext
-microsoft_office_automation/
+excel_automation/
+│
 ├── charts/                      # Directory for generated charts
 │
 ├── classes/                     
 │   ├── excel_automation.py      # Core class 
 │   └── excel_data_extractor.py  # Pandas-based class for basic ETL functions withing Excel.
-│   └── excel_formatter.py       # Openpyxl-based class for applying format to existing Excel files.
-│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with a list of DataFrames.
+│   └── excel_formatter.py       # Openpyxl-based class to apply format to existing Excel files.
+│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with DFs.
 │
-├── databases/                   # Folder for storing simple databases (in Excel)
+├── databases/                   # Folder for storing simple databases in Excel
 │
-├── macros/                      # Macros for Office applications
+├── macros/                      # Other macros for Office applications
 │
 ├── scripts/                     
 │   ├── chart_creator.py         # Script for creating charts in Excel
-│   └── report_creator.py
+│   └── report_generator.py
 │
 ├── .gitignore                   
 ├── LICENSE                      
