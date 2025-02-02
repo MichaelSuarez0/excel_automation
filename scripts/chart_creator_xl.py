@@ -30,11 +30,11 @@ if __name__ == "__main__":
 
     chart_creator = ExcelAutoChart(df_list, "o9_lim - Uso de la tecnologia e innovación")
     chart_creator.create_line_chart(index=0, sheet_name="Fig1")
-    chart_creator.create_bar_chart(index=1, sheet_name="Fig2")
+    chart_creator.create_bar_chart(index=1, sheet_name="Fig2", chart_type= "bar")
     chart_creator.create_bar_chart(index=2, sheet_name="Fig3")
     chart_creator.save_workbook()
 
-    chart_formatter = ExcelFormatter(file_name=file_name)
-    chart_formatter.apply_database_format_all()
-    chart_formatter.save_workbook(output_name=f'{file_name} - format')
+    # chart_formatter = ExcelFormatter(file_name=file_name)
+    # chart_formatter.apply_database_format_all()
+    # chart_formatter.save_workbook(output_name=f'{file_name} - format')
     

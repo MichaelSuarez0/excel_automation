@@ -33,20 +33,6 @@ class ExcelAutoChart:
         self._initialize_chart_formats()
         self._initialize_cell_formats()
 
-    def _initialize_chart_formats(self):
-        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
-        self.chart_formats = {
-            'line': {
-                'colors': color_list,
-                'width': 2.5,
-                'dash_types': ['solid', 'dash', 'dot', 'solid']
-            },
-            'marker': {
-                'size': 6,
-                'colors': color_list
-            }
-        }
-
     def _initialize_cell_formats(self):
         """Crea formatos de celdas para encabezados, primera columna, números y fechas."""
         self.header_format = self.workbook.add_format({
@@ -79,6 +65,29 @@ class ExcelAutoChart:
             'border_color': Color.WHITE.value,
             'bg_color': Color.GRAY_LIGHT.value,
         })
+
+    def _initialize_chart_formats(self):
+        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.PURPLE.value, Color.GRAY.value]
+        color_list_simple = [Color.BLUE_DARK.value, Color.RED.value, Color.BLUE.value]
+        self.chart_formats = {
+            'line': {
+                'colors': color_list,
+                'width': 2.5,
+                'dash_types': ['solid']
+            },
+            'line_simple': {
+                'colors': color_list_simple,
+                'dash_types': ['solid', 'dash', 'round_dot']
+            },
+            'marker': {
+                'size': 6,
+                'colors': color_list
+            },
+            'marker_simple': {
+                'size': 6,
+                'colors': color_list_simple
+            }
+        }
 
     def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData") -> Tuple[pd.DataFrame, Worksheet]:
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
@@ -162,11 +171,12 @@ class ExcelAutoChart:
         # })
         return chart
 
+    # TODO: Implement manual logic for specific series (i.e. Peru series)
     def create_line_chart(
         self,
         index: int = 0,
         sheet_name: str = "LineChart",
-        marker: bool = True
+        add_markers: bool = True
     ) -> Worksheet:
         """Generate line chart with color scheme from Color enum"""
         color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
@@ -180,6 +190,16 @@ class ExcelAutoChart:
         
         chart = self._create_base_chart(worksheet, 'line')
 
+        
+        if len(data_df.columns) < 4:
+            colors: list = self.chart_formats['line_simple']['colors']
+            dashes: list = self.chart_formats['line_simple']['dash_types']
+            markers: list = self.chart_formats['marker_simple']['colors']
+        else:
+            colors: list = self.chart_formats['line']['colors']
+            dashes: list = self.chart_formats['line']['dash_types']
+            markers: list = self.chart_formats['marker']['colors']
+
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]):
             col_letter = chr(66 + idx)  # Get column letter (e.g., B, C, D, ...)
@@ -191,17 +211,17 @@ class ExcelAutoChart:
                 'values': f"={sheet_name}!${col_letter}$2:${col_letter}${len(data_df)+1}",
                 'data_labels': {
                     'value': True if idx == 1 else False,
-                    'position': 'above',
+                    'position': 'below',
                     'num_format': num_format},
                 'line': {
-                    'color': self.chart_formats['line']['colors'][idx % len(self.chart_formats['line']['colors'])], # colors are cycled through the predefined list of colors (colors), even if there are more series than colors.
+                    'color': colors[idx % len(colors)],
                     'width': self.chart_formats['line']['width'],
-                    'dash_type': self.chart_formats['line']['dash_types'][idx % len(self.chart_formats['line']['dash_types'])],
+                    'dash_type': dashes[idx % len(dashes)],
                 }
             }
 
-            if marker:
-                marker_color = self.chart_formats['marker']['colors'][idx % len(self.chart_formats['marker']['colors'])]
+            if add_markers:
+                marker_color = markers[idx % len(markers)]
                 series_params['marker'] = {
                     'type': 'circle',
                     'size': self.chart_formats['marker']['size'],
@@ -302,6 +322,7 @@ class ExcelAutoChart:
                     'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
                     'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
                     'fill': {'color': color},
+                    'gap': 100,
                     'data_labels': {
                         'value': True,
                         'position': 'outside_end',
@@ -319,6 +340,7 @@ class ExcelAutoChart:
                     'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
                     'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1],  
                     'fill': {'color': color},
+                    'gap': 50,
                     'data_labels': {
                         'value': True,
                         'position': 'outside_end',
@@ -327,7 +349,7 @@ class ExcelAutoChart:
                 }
                 chart.add_series(series_params)
             
-        # TODO: Consider convertion to dataclasses
+        # TODO: Move to initialize
         # Configure axes
         if chart_type == "column":
             chart.set_y_axis({
