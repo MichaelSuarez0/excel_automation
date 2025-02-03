@@ -89,11 +89,12 @@ class ExcelAutoChart:
             }
         }
 
-    def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData") -> Tuple[pd.DataFrame, Worksheet]:
+    def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
         worksheet = self.writer.sheets[sheet_name]
         self.sheet_dfs[sheet_name] = df
-        self._apply_formatting_to_worksheet(worksheet, df)
+        if apply_format:
+            self._apply_formatting_to_worksheet(worksheet, df)
         return df, worksheet
 
     def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame):
@@ -171,14 +172,30 @@ class ExcelAutoChart:
         # })
         return chart
 
-    # TODO: Implement manual logic for specific series (i.e. Peru series)
+    # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
         self,
         index: int = 0,
         sheet_name: str = "LineChart",
-        add_markers: bool = True
+        markers_add: bool = True
     ) -> Worksheet:
-        """Generate line chart with color scheme from Color enum"""
+        """
+        Creates and inserts a line chart into an Excel worksheet using data from a DataFrame.
+
+        Parameters
+        -------
+        index : int, optional
+            Index of the DataFrame in df_list to use (default 0).
+        sheet_name : str, optional
+            Name of the worksheet (default is "FigX").
+        markers_add : bool, optional
+            Whether to add markers for series (default True).
+
+        Returns
+        -------
+        Worksheet
+            The worksheet with the inserted chart.
+        """
         color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
 
@@ -220,7 +237,7 @@ class ExcelAutoChart:
                 }
             }
 
-            if add_markers:
+            if markers_add:
                 marker_color = markers[idx % len(markers)]
                 series_params['marker'] = {
                     'type': 'circle',
@@ -259,18 +276,18 @@ class ExcelAutoChart:
     def create_bar_chart(
         self,
         index: int = 0,
-        sheet_name: str = "BarChart",
+        sheet_name: str = "FigX",
         grouping: str = "standard",
         chart_type: str = "column"  # "column" (vertical) o "bar" (horizontal)
     ) -> Worksheet:
-        """Generate a bar or column chart in Excel from a DataFrame.
+        """Generate a bar or column chart in Excel from data in a DataFrame list.
 
         Parameters
         ----------
         index : int, optional
             Index of the DataFrame in df_list to use (default is 0).
         sheet_name : str, optional
-            Name of the worksheet (default is "BarChart").
+            Name of the worksheet (default is "FigX").
         grouping : str, optional
             Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
         chart_type : str, optional
@@ -379,7 +396,66 @@ class ExcelAutoChart:
         #self.writer.close()  # Save and close workbook
         print(f"✅ Gráfico de barras agregado a la hoja {index + 1}")
         return worksheet
+    
+    def create_table(
+        self,
+        index: int = 0,
+        sheet_name: str = "TabX",
+    ) -> Worksheet:
+        """Generate a bar or column chart in Excel from a DataFrame.
+
+        Parameters
+        ----------
+        index : int, optional
+            Index of the DataFrame in df_list to use (default is 0).
+        sheet_name : str, optional
+            Name of the worksheet (default is "TabX").
+
+        Returns
+        -------
+        Worksheet
+            The worksheet with the inserted chart.
+
+        """
+        data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name, apply_format=False)
         
+        # Check if the DataFrame is empty
+        if data_df.empty:
+            raise ValueError("DataFrame is empty. No data to plot.")
+        
+        # Set column widths
+        worksheet.set_column('A:A', 24)
+        worksheet.set_column('B:B', 60)
+
+        # Hide gridlines
+        worksheet.hide_gridlines(2)
+
+        # Define base formats
+        gray_format = self.workbook.add_format({'bg_color': Color.GRAY_LIGHT.value, 'text_wrap': True, 'valign': 'vcenter'})
+        default_format = self.workbook.add_format({'text_wrap': True, 'valign': 'vcenter'})
+        bold_format = self.workbook.add_format({'bold': True, 'text_wrap': True, 'valign': 'vcenter'})
+        gray_bold_format = self.workbook.add_format({'bg_color': Color.GRAY_LIGHT.value, 'bold': True, 'text_wrap': True, 'valign': 'vcenter'})
+
+        # Write headers with header format
+        for col_num, col_name in enumerate(data_df.columns):
+            worksheet.write(0, col_num, col_name, self.header_format)
+
+        # Write table contents with alternating colors and bold for first column
+        for row_idx in range(data_df.shape[0]):
+            for col_idx in range(data_df.shape[1]):
+                cell_value = data_df.iloc[row_idx, col_idx]
+
+                # Select format based on column and row index
+                if col_idx == 0:
+                    cell_format = gray_bold_format if row_idx % 2 == 0 else bold_format  
+                else:
+                    cell_format = gray_format if row_idx % 2 == 0 else default_format 
+
+                worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
+
+        print(f"✅ Tabla agregada en la hoja {index + 1}")
+        return worksheet
+
     def save_workbook(self):
         self.writer.close()
         print(f'✅ Excel guardado como "{self.output_name}"')
