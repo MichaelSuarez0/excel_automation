@@ -77,7 +77,7 @@ class ExcelDataExtractor():
         print(f'The workbook has {count} sheets.')
         return count
     
-    # Opening methods
+    # Reading methods
     def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
         """Reads sheet and return a DataFrame, may specify worksheet index"""
         sheet_name = self.wb.sheetnames[sheet_index] if sheet_index else self.wb.sheetnames[0]
@@ -93,7 +93,24 @@ class ExcelDataExtractor():
     
     # Transformation methods
     def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> list[pd.DataFrame]:
-        """Normalizes the orientation of all DataFrames. Converts to list if a single df is provided"""
+        """
+        Normalizes the orientation of one or more DataFrames. Converts to list if a single DataFrame is provided.
+
+        Parameters:
+        ----------
+        dfs : pd.DataFrame | list[pd.DataFrame]
+            A DataFrame or a list of DataFrames to be normalized.
+
+        Returns:
+        -------
+        list[pd.DataFrame]
+            A list of normalized DataFrames with the correct orientation.
+        
+        Raises:
+        ------
+        ValueError
+            If the input is neither a DataFrame nor a list of DataFrames.
+        """
         if not isinstance(dfs, (pd.DataFrame, list)):
             raise ValueError("Must provide either a DataFrame or a list of DataFrames")
         if isinstance(dfs, pd.DataFrame):
@@ -101,8 +118,6 @@ class ExcelDataExtractor():
         normalized_dfs = []
         for df in dfs:
             # Check if the first row contains categories. If it does, it will transpose the df.
-            if isinstance(df.iloc[0, 1], str) and isinstance(df.iloc[1, 0], str):
-                continue
             if not isinstance(df.iloc[0, 1], str):
                 index_name = df.columns[0]
                 df = df.set_index(df.columns[0]).transpose() # Manually set another index, or else the default index stays on top
@@ -117,21 +132,84 @@ class ExcelDataExtractor():
         df: pd.DataFrame,
         selected_categories: Optional[list[str]] = None,
     ) -> pd.DataFrame:
-        """Filters data based on selected_categories"""
+        """
+        Filters the input DataFrame by selecting columns based on the provided categories.
+        Should be run AFTER normalizing orientation for all DataFrames.
+
+        This function filters the given DataFrame (`df`) by selecting only columns (containing
+        categories like Departamento) that match the values in `selected_categories`. It
+        ensures no duplicated columns are selected, and always includes the first column of 
+        the DataFrame (typically used as an identifier or key). If no `selected_categories` 
+        are provided, the function returns the original DataFrame without any filtering.
+
+        Parameters:
+        ----------
+        df : pd.DataFrame
+            The DataFrame to be filtered.
+        selected_categories : list[str], optional
+            A list of column names to be included in the filtered DataFrame. If `None`, 
+            no filtering is applied, and the original DataFrame is returned.
+
+        Returns:
+        -------
+        pd.DataFrame
+            A DataFrame containing only the selected columns, including the first column.
+        
+        Example:
+        --------
+        # Sample usage:
+        df = pd.DataFrame({
+            'Departamento': ['Lima', 'Arequipa', 'Cusco'],
+            '2014': [10, 20, 30],
+            '2015': [11, 21, 31]
+        })
+
+        selected_categories = ['Lima']
+        filtered_df = filter_data(df, selected_categories)
+        print(filtered_df)
+
+        Output:
+        --------
+        Departamento   2014 2015
+        0   Lima        10  11
+
+        """
         if selected_categories:
             cols = [df.columns[0]] # Start with the first column, remember labels are in Row 1
             
             # Loop through the remaining columns and add them if they are in selected_labels
             for col in df.columns[1:]:
-                if col in selected_categories:
+                if col in selected_categories and col not in cols:  # Asegúrate de no añadir duplicados
                     cols.append(col)
             filtered_df = df[cols]
-        else:
-            filtered_df = df
-        #ic(filtered_df)
 
         return filtered_df
     
+    def concat_dataframes(
+        self, 
+        df1: pd.DataFrame,
+        df2: pd.DataFrame,
+        df1_name: str,
+        df2_name: str,
+    )-> pd.DataFrame:
+        """Concatenates two DataFrames and adds a row for the 'Tipo' at the start of the DataFrame."""
+
+        df1 = pd.concat([df1, pd.DataFrame([['Tipo'] + [df1_name] * (len(df1.columns)-1)], columns=df1.columns)]).reset_index(drop=True)
+        df2 = pd.concat([df2, pd.DataFrame([['Tipo'] + [df2_name] * (len(df2.columns)-1)], columns=df2.columns)]).reset_index(drop=True)
+        result_df = pd.merge(df1, df2, on="Departamento", how='outer', suffixes=('_1', '_2'))
+        
+        # Mover la fila "Tipo" al principio
+        result_df = pd.concat([result_df.iloc[[-1],:], result_df.drop(result_df.index[-1], axis=0)], axis=0)
+
+        # Convertir la primera fila (Tipo) en los nombres de las columnas
+        result_df.columns = result_df.iloc[0].reset_index(drop=True)
+
+        # Eliminar la fila "Tipo"
+        result_df = result_df[result_df['Tipo'] != 'Tipo'].reset_index(drop=True)
+        print(result_df.columns)
+
+        return result_df
+
     # Writing methods (simple)
     def dataframe_to_worksheet(self, df: pd.DataFrame, sheet_name: str = 'Hoja1', mode: str = 'w') -> None:
         """Writes a DataFrame to a worksheet in the Excel file.
@@ -182,31 +260,3 @@ class ExcelDataExtractor():
 
 
 
-
-# class ExcelAutomation:
-#     def __init__(self, file_name: str):
-#         """Class for automating Excel-related tasks.
-
-#         Parameters
-#         ----------
-#         file_name : str
-#             The name of the Excel file to be created or loaded.
-#         """
-#         self.handler = ExcelHandler(file_name)  # Initialize ExcelHandler
-#         self.formatter = ExcelFormatter(workbook= self.handler.wb)  # Pass the workbook to ExcelFormatter
-
-#     def save_workbook(self, name: str = "excel_test") -> None:
-#         """Saves the workbook using ExcelHandler."""
-#         self.handler.save_workbook(name)
-
-#     def apply_database_format(self, sheet_name: str = 'Hoja1', decimals: bool = True) -> None:
-#         """Applies database formatting using ExcelFormatter."""
-#         self.formatter.apply_database_format(sheet_name, decimals)
-
-#     def get_sheet_names(self) -> list[str]:
-#         """Returns the sheet names using ExcelHandler."""
-#         return self.handler.sheet_names
-
-#     def get_count_sheets(self) -> int:
-#         """Returns the number of sheets using ExcelHandler."""
-#         return self.handler.count_sheets
