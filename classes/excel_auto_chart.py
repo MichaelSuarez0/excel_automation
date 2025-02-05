@@ -4,7 +4,7 @@ from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 from xlsxwriter.format import Format
 from xlsxwriter.utility import xl_range
-from microsoft_office_automation.classes.colors import Color
+from excel_automation.classes.colors import Color
 from typing import Tuple, Optional
 import numpy as np
 
@@ -50,7 +50,7 @@ class ExcelAutoChart:
             'border_color': Color.WHITE.value,
         })
         self.number_format = self.workbook.add_format({
-            'num_format': '0.00',
+            'num_format': '0.0',
             'border': 1,
             'border_color': Color.GRAY_LIGHT.value,
         })
@@ -66,26 +66,39 @@ class ExcelAutoChart:
             'bg_color': Color.GRAY_LIGHT.value,
         })
 
+    # TODO: Test with column widths
+    # TODO: Ajusta tamaño de la leyenda para gráficos no simples
     def _initialize_chart_formats(self):
-        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.PURPLE.value, Color.GRAY.value]
-        color_list_simple = [Color.BLUE_DARK.value, Color.RED.value, Color.BLUE.value]
+        line_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.PURPLE.value, Color.GRAY.value]
+        line_simple_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.BLUE.value]
+        column_colors = [Color.BLUE_DARK.value, Color.BLUE.value, Color.GREEN_DARK.value, Color.RED.value, Color.ORANGE.value, Color.YELLOW.value, Color.GRAY.value]
+        column_simple_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.GRAY.value]
         self.chart_formats = {
             'line': {
-                'colors': color_list,
+                'colors': line_colors,
                 'width': 2.5,
                 'dash_types': ['solid']
             },
             'line_simple': {
-                'colors': color_list_simple,
+                'colors': line_simple_colors,
                 'dash_types': ['solid', 'dash', 'round_dot']
+            },
+            'column': {
+                'colors': column_colors,
+                'width': 2.5,
+            },
+            'column_simple': {
+                'colors': column_simple_colors,
+                'width': 2.5,
+                'dash_types': ['solid']
             },
             'marker': {
                 'size': 6,
-                'colors': color_list
+                'colors': line_colors
             },
             'marker_simple': {
                 'size': 6,
-                'colors': color_list_simple
+                'colors': line_simple_colors
             }
         }
 
@@ -172,6 +185,7 @@ class ExcelAutoChart:
         # })
         return chart
 
+    # TODO: Decidir si quedarse con un decimal o dos
     # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
         self,
@@ -199,7 +213,7 @@ class ExcelAutoChart:
         color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
 
-        num_format = '# ##0.00' if isinstance(self.df_list[index].iloc[0,1], float) else '# ##0'
+        num_format = '# ##0.0' if isinstance(self.df_list[index].iloc[0,1], float) else '# ##0'
         
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -207,8 +221,7 @@ class ExcelAutoChart:
         
         chart = self._create_base_chart(worksheet, 'line')
 
-        
-        if len(data_df.columns) < 4:
+        if len(data_df.columns) < 5:
             colors: list = self.chart_formats['line_simple']['colors']
             dashes: list = self.chart_formats['line_simple']['dash_types']
             markers: list = self.chart_formats['marker_simple']['colors']
@@ -250,7 +263,7 @@ class ExcelAutoChart:
 
         # Axis configuration
         chart.set_y_axis({
-            'name': 'Percentage (%)',
+            'name': 'Porcentaje (%)',
             'num_format': '0.00',
             'major_gridlines': {
                 'visible': True,
@@ -303,7 +316,6 @@ class ExcelAutoChart:
         ValueError
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
-        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
         data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
 
         num_format = '# ##0.00' if isinstance(self.df_list[index].iloc[0,1], float) else '# ##0'
@@ -326,7 +338,11 @@ class ExcelAutoChart:
 
         # Predefined formats
         chart = self._create_base_chart(worksheet, chart_type, subtype)
-        colors = self.chart_formats['line']['colors']
+
+        if grouping == "standard" or len(data_df.columns) < 4:
+            colors: list = self.chart_formats['column_simple']['colors']
+        else:
+            colors: list = self.chart_formats['column']['colors']
 
         # Add data series with color scheme
         if chart_type == "column":
@@ -343,7 +359,12 @@ class ExcelAutoChart:
                     'data_labels': {
                         'value': True,
                         'position': 'outside_end',
-                        'num_format': num_format
+                        'num_format': num_format,
+                        'font':{
+                            'bold': True,
+                            'color': Color.WHITE.value if color not in (Color.YELLOW.value, Color.GRAY.value) else Color.BLACK.value,
+                            'size': 10.5
+                        }
                     },
                 }
                 chart.add_series(series_params)
@@ -370,7 +391,7 @@ class ExcelAutoChart:
         # Configure axes
         if chart_type == "column":
             chart.set_y_axis({
-                'name': 'Percentage (%)',
+                'name': 'Porcentaje (%)',
                 'num_format': '0',
                 'max': 100,
                 'min': 0,
@@ -381,7 +402,7 @@ class ExcelAutoChart:
         elif chart_type == "bar":
             chart.set_legend({'none': True})
             chart.set_x_axis({
-                'name': 'Percentage (%)',
+                'name': 'Porcentaje (%)',
                 'num_format': '0',
                 'max': 100,
                 'min': 0,

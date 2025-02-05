@@ -14,7 +14,7 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "charts")
 
 class ExcelDataExtractor():
-    def __init__(self, file_name: str, output_name: str):
+    def __init__(self, file_name: str):
         """Class to obtain data from an Excel file, convert to DataFrame, apply transformations, and export it. 
         Engine: mostly pandas
 
@@ -24,7 +24,7 @@ class ExcelDataExtractor():
                 The name of the Excel file to be loaded (from databases folder)
         """
         self.file_path = os.path.join(script_dir, "..", "databases", f'{file_name}.xlsx')
-        self.output_path = os.path.join(script_dir, "..", "charts", f'{output_name}.xlsx')
+        self.output_path = os.path.join(script_dir, "..", "charts")
         self.wb = None
         self.ws = None
         self.load_workbook()
@@ -34,7 +34,7 @@ class ExcelDataExtractor():
         # Access different worksheets with self.wb.sheetnames[int]
         self.ws= self.wb.active
     
-    def save_workbook(self)-> None:
+    def save_workbook(self, output_name: str)-> None:
         """Save your workbook. Automatically includes extension in the name if not declared.
 
         Args:
@@ -211,7 +211,7 @@ class ExcelDataExtractor():
         return result_df
 
     # Writing methods (simple)
-    def dataframe_to_worksheet(self, df: pd.DataFrame, sheet_name: str = 'Hoja1', mode: str = 'w') -> None:
+    def dataframe_to_worksheet(self, df: pd.DataFrame, output_name: str, sheet_name: str = 'Hoja1', mode: str = 'w') -> None:
         """Writes a DataFrame to a worksheet in the Excel file.
 
         Parameters
@@ -223,10 +223,18 @@ class ExcelDataExtractor():
         mode : str, optional
             The mode to open the Excel file ('w' for write, 'a' for append). Defaults to 'w'.
         """
-        with pd.ExcelWriter(self.output_path, engine='openpyxl', mode=mode) as writer:
+        output_file_path = os.path.join(self.output_path, f'{output_name}.xlsx')
+        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode=mode) as writer:
             df.to_excel(writer, sheet_name=sheet_name, index=False)
         
-    def dataframes_to_worksheets(self, dfs: list[pd.DataFrame], sheet_names: list[str] = None, mode: str = 'w', skip_first: bool = True) -> None:
+    def dataframes_to_worksheets(
+        self,
+        dfs: list[pd.DataFrame],
+        output_name: str,
+        sheet_names: list[str] = None, 
+        mode: str = 'w', 
+        skip_first: bool = True
+    ) -> None:
         """Writes multiple DataFrames to multiple worksheets in the Excel file.
 
         Parameters
@@ -246,14 +254,16 @@ class ExcelDataExtractor():
         if len(dfs) != len(sheet_names):
             raise ValueError("The number of DataFrames must match the number of sheet names.")
 
-        # If skip_first is True, add a blank worksheet as the first one
-        if skip_first:
-            with pd.ExcelWriter(self.output_path, engine='openpyxl', mode=mode) as writer:
-                pd.DataFrame().to_excel(writer, sheet_name='Índice') 
+        output_file_path = os.path.join(self.output_path, f'{output_name}.xlsx')
 
-        # Write DataFrames to subsequent sheets
-        for i, (df, sheet_name) in enumerate(zip(dfs, sheet_names), start=1 if skip_first else 0):
-            self.dataframe_to_worksheet(df, sheet_name=sheet_name, mode=mode)
+        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode=mode) as writer:
+            # If skip_first is True, create an empty sheet as the first one
+            if skip_first:
+                pd.DataFrame().to_excel(writer, sheet_name='Índice')
+
+            # Write DataFrames to subsequent sheets
+            for df, sheet_name in zip(dfs, sheet_names):
+                df.to_excel(writer, sheet_name=sheet_name, index=False)
    
     # TODO: All that is missing is FUENTE and URL
     # TODO: Use sheet index instead of name

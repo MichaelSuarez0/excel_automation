@@ -31,6 +31,7 @@ excel_automation/
 │   ├── excel_automation.py      # Core class 
 │   └── excel_data_extractor.py  # Pandas-based class for basic ETL functions withing Excel.
 │   └── excel_formatter.py       # Openpyxl-based class to apply format to existing Excel files.
+│   └── excel_handler.py         # Win32-based class to rearrange Excel files preserving format.
 │   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with DFs.
 │
 ├── databases/                   # Folder for storing simple databases in Excel
