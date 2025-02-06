@@ -133,8 +133,8 @@ def uso_tecnologia_educacion():
 
 def reforzamiento_programas_sociales():
     # Variables
-    departamentos1 = ["Lima Metropolitana", "TOTAL"]
-    departamentos2 = ["Lima", "TOTAL"]
+    departamentos1 = ["Lima Metropolitana", "Total"]
+    departamentos2 = ["Lima"]
     final_file_name = "o6_lim - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
 
     # ETL
@@ -145,12 +145,13 @@ def reforzamiento_programas_sociales():
     df_list[1] = excel.filter_data(df_list[1], departamentos2)
     df_list[2] = excel.filter_data(df_list[2], departamentos2)
     df_list[1] = excel.concat_dataframes(df_list[1], df_list[2], "Juntos", "Pension 65")
-    ic(df_list)
+    df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:] / 10000000 # Para dividir todas las columnas menos la primera entre 10°8
+    df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:].round(2)
 
-    #Charts
+    # Charts
     chart_creator = ExcelAutoChart(df_list, final_file_name)
-    chart_creator.create_line_chart(index=0, sheet_name="Fig1")
-    chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping="stacked", chart_type="column")
+    chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="percentage")
+    chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping="standard", chart_type="column", numeric_type="decimal_1")
     chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
