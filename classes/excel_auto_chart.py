@@ -34,36 +34,54 @@ class ExcelAutoChart:
 
     def _initialize_cell_formats(self):
         """Crea formatos de celdas para encabezados, primera columna, números y fechas."""
-        self.header_format = self.workbook.add_format({
+        base_borders = {
+            'border': 1,
+            'border_color': Color.WHITE.value,
+        }
+
+        self.header_format = {
+            **base_borders,
             'bg_color': Color.BLUE_DARK.value,
             'font_color': Color.WHITE.value,
             'bold': True,
             'align': 'center',
             'valign': 'vcenter',
-            'border': 1,
-            'border_color': Color.WHITE.value,
-        })
-        self.first_column_format = self.workbook.add_format({
+        }
+
+        self.first_column_format = {
+            **base_borders,
             'bg_color': Color.GRAY_LIGHT.value,
+        }
+
+        self.decimal1_format = {
+            'num_format': '0.0',
             'border': 1,
-            'border_color': Color.WHITE.value,
-        })
-        self.number_format = self.workbook.add_format({
+            'border_color': Color.GRAY_LIGHT.value,
+        }
+
+        self.decimal2_format = {
             'num_format': '0.00',
             'border': 1,
             'border_color': Color.GRAY_LIGHT.value,
-        })
-        self.integer_format = self.workbook.add_format({
+        }
+
+        self.integer_format = {
             'num_format': '0',
             'border': 1,
             'border_color': Color.GRAY_LIGHT.value,
-        })
-        self.date_format = self.workbook.add_format({
-            'num_format': 'mmm-yy',
+        }
+
+        self.percentage_format = {
+            'num_format': '0.0%',
             'border': 1,
-            'border_color': Color.WHITE.value,
+            'border_color': Color.GRAY_LIGHT.value,
+        }
+
+        self.date_format = {
+            **base_borders,
+            'num_format': 'mmm-yy',
             'bg_color': Color.GRAY_LIGHT.value,
-        })
+        }
 
     # TODO: Test with column widths
     # TODO: Add param for legend and adjust height if not legend
@@ -119,16 +137,7 @@ class ExcelAutoChart:
             }
         }
         
-
-    def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
-        df.to_excel(self.writer, sheet_name=sheet_name, index=False)
-        worksheet = self.writer.sheets[sheet_name]
-        self.sheet_dfs[sheet_name] = df
-        if apply_format:
-            self._apply_formatting_to_worksheet(worksheet, df)
-        return df, worksheet
-
-    def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame):
+    def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame, config: dict):
         """Applies formatting only to cells with data."""
         # Set column widths
         worksheet.set_column('A:A', 15)
@@ -143,11 +152,11 @@ class ExcelAutoChart:
         if pd.api.types.is_datetime64_any_dtype(df[first_col]):
             first_col_fmt = self.date_format
         else:
-            first_col_fmt = self.first_column_format
+            first_col_fmt = self.workbook.add_format(self.first_column_format)
 
         # Write headers with header format
         for col_num, col_name in enumerate(df.columns):
-            worksheet.write(0, col_num, col_name, self.header_format)
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.header_format))
 
         # Write data cells with appropriate formats
         for row_idx in range(df.shape[0]):
@@ -158,19 +167,21 @@ class ExcelAutoChart:
             # Other columns (numeric data)
             for col_idx in range(1, df.shape[1]):
                 cell_value = df.iloc[row_idx, col_idx]
-                dtype = df.dtypes.iloc[col_idx]  # Use .iloc for positional indexing
 
                 # Skip NaN/Inf values by checking if the value is NaN or Inf
                 if pd.isna(cell_value) or np.isinf(cell_value):
                     worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
-
                 else:
-                    if np.issubdtype(dtype, np.floating):
-                        fmt = self.number_format
-                    else:
-                        fmt = self.integer_format
-
-                    worksheet.write(row_idx + 1, col_idx, cell_value, fmt)
+                    # Write the valid value with the appropriate format
+                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(config))
+                
+    def _write_to_excel(self, df: pd.DataFrame, config: dict, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
+        df.to_excel(self.writer, sheet_name=sheet_name, index=False)
+        worksheet = self.writer.sheets[sheet_name]
+        self.sheet_dfs[sheet_name] = df
+        if apply_format:
+            self._apply_formatting_to_worksheet(worksheet, df, config)
+        return df, worksheet
     
     # TODO: Here you can define base chart configs for bar charts
     # TODO: Consider discussing chart font being Aptos Narrow
@@ -193,22 +204,18 @@ class ExcelAutoChart:
 
         return chart
     
-    def _define_numeric_format(self, numeric_type)-> Tuple[str, str]:
+    def _define_numeric_format(self, numeric_type)-> dict:
         if numeric_type == "integer":
-            num_format = '#,##0'
-            title = "Unidades"
+            config = self.integer_format
         elif numeric_type == "decimal_1":
-            num_format = '#,##0.0'
-            title = "Puntaje"
+            config = self.decimal1_format
         elif numeric_type == "decimal_2":
-            num_format = '#,##0.00'
-            title = "Millones de soles"
+            config = self.decimal2_format
         elif numeric_type == "percentage":
-            num_format = '0.0%'
-            title = "Porcentaje"
+            config = self.percentage_format
         else:
             raise ValueError(f"Invalid numeric_type: {numeric_type}. Valid options are 'integer', 'decimal_1', 'decimal_2', 'percentage'.")
-        return num_format, title
+        return config
 
     # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
@@ -216,7 +223,8 @@ class ExcelAutoChart:
             index: int = 0,
             sheet_name: str = "LineChart",
             markers_add: bool = True,
-            numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2"
+            numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
+            axis_title: str = ""
         ) -> Worksheet:
         """
         Creates and inserts a line chart into an Excel worksheet using data from a DataFrame.
@@ -239,10 +247,8 @@ class ExcelAutoChart:
             The worksheet with the inserted chart.
         """
         # Definir el formato numérico según 'numeric_type'
-        num_format, title = self._define_numeric_format(numeric_type)
-
-        color_list = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.GRAY.value]
-        data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
+        config = self._define_numeric_format(numeric_type)
+        data_df, worksheet = self._write_to_excel(self.df_list[index], config, sheet_name, config)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -272,7 +278,7 @@ class ExcelAutoChart:
                 'data_labels': {
                     'value': True if idx in (1,2) else False,
                     'position': 'above' if idx == 1 else 'below',
-                    'num_format': num_format,
+                    'num_format': config["num_format"],
                     'font':{
                             'color': colors[idx % len(colors)],
                             }
@@ -297,8 +303,8 @@ class ExcelAutoChart:
 
         # Axis configuration
         chart.set_y_axis({
-            'name': title,
-            'num_format': '0%' if num_format=='percentage' else num_format,
+            'name': axis_title,
+            'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
             'major_gridlines': {
                 'visible': True,
                 'line': {'color': Color.GRAY_LIGHT.value}
@@ -321,14 +327,16 @@ class ExcelAutoChart:
         print(f"✅ Gráfico de líneas agregado a la hoja {index + 1}")
         return worksheet
     
-    # TODO: Ordenar por secciones     
+    # TODO: Ordenar por secciones
+    # TODO: If bar, sort ascending     
     def create_bar_chart(
             self,
             index: int = 0,
             sheet_name: str = "FigX",
-            grouping: str = "standard",
-            chart_type: str = "column",  # "column" (vertical) o "bar" (horizontal)
-            numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2"
+            grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
+            chart_type: Literal['bar', 'column'] = 'column',
+            numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
+            axis_title: str = ""
         ) -> Worksheet:
         """Generate a bar or column chart in Excel from data in a DataFrame list.
 
@@ -342,8 +350,9 @@ class ExcelAutoChart:
             Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
         chart_type : str, optional
             Type of chart to create: "column" for vertical or "bar" for horizontal (default is "column").
-       decimals : int = None
-            How many decimals to show (1, 2 or leave it automatically)
+        numeric_type : str, optional
+            Defines the number format for the series. Options are:
+            'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
 
         Returns
         -------
@@ -355,9 +364,8 @@ class ExcelAutoChart:
         ValueError
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
-        data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name)
-
-        num_format, title = self._define_numeric_format(numeric_type)
+        config = self._define_numeric_format(numeric_type)
+        data_df, worksheet = self._write_to_excel(self.df_list[index], config, sheet_name)
         
         # Check if DataFrame is empty
         if data_df.empty:
@@ -400,7 +408,7 @@ class ExcelAutoChart:
                     'data_labels': {
                         'value': value_data,
                         'position': 'outside_end',
-                        'num_format': num_format,
+                        'num_format': config["num_format"],
                         'font':{
                             'bold': True,
                             'color': Color.BLACK.value, #Color.WHITE.value if color not in (Color.YELLOW.value, Color.GRAY.value) else Color.BLACK.value,
@@ -423,7 +431,7 @@ class ExcelAutoChart:
                     'data_labels': {
                         'value': True,
                         'position': 'outside_end',
-                        'num_format': num_format
+                        'num_format': config["num_format"]
                     },
                 }
                 chart.add_series(series_params)
@@ -432,8 +440,8 @@ class ExcelAutoChart:
         # Configure axes
         if chart_type == "column":
             chart.set_y_axis({
-                'name': title,
-                'num_format': '0%' if num_format=='percentage' else num_format,
+                'name': axis_title,
+                'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
                 'min': 0,
                 'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
             })
@@ -447,9 +455,8 @@ class ExcelAutoChart:
         elif chart_type == "bar":
             chart.set_legend({'none': True})
             chart.set_x_axis({
-                'name': title,
-                'num_format': '0',
-                'max': 100,
+                'name': axis_title,
+                'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
                 'min': 0,
                 'minor_tick_mark': 'outside',
                 'major_tick_mark': 'none',
@@ -490,8 +497,8 @@ class ExcelAutoChart:
             The worksheet with the inserted chart.
 
         """
-        data_df, worksheet = self._write_to_excel(self.df_list[index], sheet_name, apply_format=False)
-        
+        data_df, worksheet = self._write_to_excel(self.df_list[index], {}, sheet_name, apply_format=False)
+
         # Check if the DataFrame is empty
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
@@ -511,7 +518,7 @@ class ExcelAutoChart:
 
         # Write headers with header format
         for col_num, col_name in enumerate(data_df.columns):
-            worksheet.write(0, col_num, col_name, self.header_format)
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.header_format))
 
         # Write table contents with alternating colors and bold for first column
         for row_idx in range(data_df.shape[0]):
