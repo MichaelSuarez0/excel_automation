@@ -69,19 +69,26 @@ class ExcelAutoChart:
     # TODO: Test with column widths
     # TODO: Ajusta tamaño de la leyenda para gráficos no simples
     def _initialize_chart_formats(self):
-        line_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.GREEN_DARK.value, Color.ORANGE.value, Color.PURPLE.value, Color.GRAY.value]
-        line_simple_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.BLUE.value]
+        line_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.ORANGE.value, Color.GREEN_DARK.value, Color.PURPLE.value, Color.GRAY.value]
+        line_simple_colors = [Color.RED.value, Color.BLUE.value, Color.BLUE_DARK.value]
         column_colors = [Color.BLUE_DARK.value, Color.BLUE.value, Color.GREEN_DARK.value, Color.RED.value, Color.ORANGE.value, Color.YELLOW.value, Color.GRAY.value]
         column_simple_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.GRAY.value]
+        axis_base = {
+            'minor_tick_mark': 'outside',
+            'major_tick_mark': 'none',
+            'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
+        }
+
         self.chart_formats = {
             'line': {
                 'colors': line_colors,
-                'width': 2.5,
-                'dash_types': ['solid']
+                'width': 1.75,
+                'dash_types': ['solid', 'round_dot','round_dot','round_dot','round_dot','round_dot','round_dot','round_dot']
             },
             'line_simple': {
                 'colors': line_simple_colors,
-                'dash_types': ['solid', 'dash', 'round_dot']
+                'width': 1.75,
+                'dash_types': ['round_dot', 'square_dot', 'solid']
             },
             'column': {
                 'colors': column_colors,
@@ -99,8 +106,22 @@ class ExcelAutoChart:
             'marker_simple': {
                 'size': 6,
                 'colors': line_simple_colors
+            },
+            'axis_percentage':{
+                **axis_base,
+                'name': 'Porcentaje (%)',
+                'num_format': '0',
+                'max': 100,
+                'min': 0,
+
+            },
+            'axis_number':{
+                **axis_base,
+                'name': 'Unidades',
+                'num_format': '0',
             }
         }
+        
 
     def _write_to_excel(self, df: pd.DataFrame, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
@@ -154,8 +175,10 @@ class ExcelAutoChart:
 
                     worksheet.write(row_idx + 1, col_idx, cell_value, fmt)
     
+    # TODO: Here you can define base chart configs for bar charts
     # TODO: Explicitly call title = ""
     # TODO: Add param for legend and adjust height if not legend
+    # TODO: Chart font should be Aptos Narrow
     def _create_base_chart(self, worksheet: Worksheet, chart_type: str, chart_subtype: str = ""):
         """Default settings for all chart types"""
         chart = self.workbook.add_chart({'type': chart_type}) if not chart_subtype else self.workbook.add_chart({'type': chart_type, 'subtype': chart_subtype})
@@ -173,16 +196,6 @@ class ExcelAutoChart:
         })
         chart.set_chartarea({'border': {'none': True}})
 
-        # # Agregar etiquetas de datos (doesn't work)
-        # chart.set_series({
-        #     0: {
-        #         'data_labels': {
-        #             'value': True,   
-        #             'num_format': '00,00', 
-        #             'position': 'outside_end'  # Posición de la etiqueta
-        #         }
-        #     }
-        # })
         return chart
 
     # TODO: Decidir si quedarse con un decimal o dos
@@ -239,10 +252,15 @@ class ExcelAutoChart:
                 'name': f"={sheet_name}!${col_letter}$1",  # Use column letter dynamically
                 'categories': f"={sheet_name}!$A$2:$A${len(data_df)+1}",
                 'values': f"={sheet_name}!${col_letter}$2:${col_letter}${len(data_df)+1}",
+                'smooth': True,
                 'data_labels': {
                     'value': True if idx == 1 else False,
                     'position': 'below',
-                    'num_format': num_format},
+                    'num_format': num_format,
+                    'font':{
+                            'color': colors[idx % len(colors)],
+                            }
+                        },
                 'line': {
                     'color': colors[idx % len(colors)],
                     'width': self.chart_formats['line']['width'],
@@ -275,6 +293,8 @@ class ExcelAutoChart:
             'name': '',
             'num_format': '0',
             'text_axis': True,
+            'minor_tick_mark': 'outside',
+            'major_tick_mark': 'none'
         })
 
         # Insert chart with proper positioning
@@ -343,12 +363,14 @@ class ExcelAutoChart:
             colors: list = self.chart_formats['column_simple']['colors']
         else:
             colors: list = self.chart_formats['column']['colors']
+        
 
         # Add data series with color scheme
         if chart_type == "column":
-            for idx, col in enumerate(data_df.columns[1:]):
-                col_idx = idx + 1  # Saltamos la primera columna (categorías)
+            for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
+                col_idx = idx + 1  
                 color = colors[idx % len(colors)]
+                value_data = (data_df[col] != 0).all()
                 
                 series_params = {
                     'name': [sheet_name, 0, col_idx],         
@@ -357,7 +379,7 @@ class ExcelAutoChart:
                     'fill': {'color': color},
                     'gap': 100,
                     'data_labels': {
-                        'value': True,
+                        'value': value_data,
                         'position': 'outside_end',
                         'num_format': num_format,
                         'font':{
@@ -397,7 +419,12 @@ class ExcelAutoChart:
                 'min': 0,
                 'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
             })
-            chart.set_x_axis({'name': '', 'text_axis': True, 'num_format': '@'})
+            chart.set_x_axis({
+                'name': '',
+                'text_axis': True,
+                'num_format': '@',
+                'minor_tick_mark': 'outside',
+                'major_tick_mark': 'none'})
 
         elif chart_type == "bar":
             chart.set_legend({'none': True})
@@ -406,9 +433,16 @@ class ExcelAutoChart:
                 'num_format': '0',
                 'max': 100,
                 'min': 0,
+                'minor_tick_mark': 'outside',
+                'major_tick_mark': 'none',
                 'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
             })
-            chart.set_y_axis({'name': '', 'text_axis': True, 'num_format': '@'})
+            chart.set_y_axis({
+                'name': '',
+                'text_axis': True,
+                'num_format': '@',
+                'minor_tick_mark': 'outside',
+                'major_tick_mark': 'none',})
 
         # Insert chart with proper positioning
         position = 'E3' if len(data_df.columns[1:]) < 4 else 'J3'

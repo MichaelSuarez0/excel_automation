@@ -17,6 +17,7 @@ Provides reusable functions to convert Excel data into DataFrames, export to dif
   - Read, write, and manipulate Excel files.
   - Generate formatted charts (line charts and bar charts)
   - Export data to a new Excel sheet with an elegant format
+  - Create pivot tables from existing data (not implemented yet)
 
 ## Structure
 
@@ -30,9 +31,9 @@ excel_automation/
 ├── classes/                     
 │   ├── excel_automation.py      # Core class 
 │   └── excel_data_extractor.py  # Pandas-based class for basic ETL functions withing Excel.
+│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with DFs.
 │   └── excel_formatter.py       # Openpyxl-based class to apply format to existing Excel files.
 │   └── excel_handler.py         # Win32-based class to rearrange Excel files preserving format.
-│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with DFs.
 │
 ├── databases/                   # Folder for storing simple databases in Excel
 │

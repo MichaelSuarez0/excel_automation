@@ -1,6 +1,6 @@
-from microsoft_office_automation.classes.excel_data_extractor import ExcelDataExtractor
-from microsoft_office_automation.classes.excel_auto_chart import ExcelAutoChart
-from microsoft_office_automation.classes.excel_formatter import ExcelFormatter
+from excel_automation.classes.excel_data_extractor import ExcelDataExtractor
+from excel_automation.classes.excel_auto_chart import ExcelAutoChart
+from excel_automation.classes.excel_formatter import ExcelFormatter
 from icecream import ic
 import pprint
 import pandas as pd
@@ -34,8 +34,8 @@ def inmanejable_inflacion_departamental():
 # ====================================================== #
 def brecha_digital():
     # Variables
-    regiones = ["Costa", "Sierra", "Selva"]
-    departamentos = ["Total", "Lima Region", "Lima Metropolitana"]
+    regiones = ["Costa", "Sierra", "Selva", "Total"]
+    departamentos = ["Lima Region", "Lima Metropolitana"]
     file_name = "o8_lim - Cierre de la brecha digital"
 
     # ETL
@@ -94,18 +94,18 @@ def edificaciones_antisismicas():
     final_file_name = "o5_lim - Mayor construcción de edificaciones antisísmicas"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Edificaciones antisismicas", "TMR")
+    excel = ExcelDataExtractor("Oportunidad - Edificaciones antisismicas")
     df_list = excel.worksheets_to_dataframes(False)
     df_list = excel.normalize_orientation(dfs=df_list)
     df_list[0] = excel.filter_data(df_list[0], departamentos)
     df_list[1] = excel.filter_data(df_list[1], departamentos)
     df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores", "Temblores mayores")
-    pprint.pprint(df_list[0])
+    df_list[0] = df_list[0].replace("-", 0)
 
     #Charts
     chart_creator = ExcelAutoChart(df_list, final_file_name)
     chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="column", grouping="stacked")
-    chart_creator.create_table(index=0, sheet_name="Tab1")
+    chart_creator.create_table(index=2, sheet_name="Tab1")
     chart_creator.save_workbook()
 
 
@@ -130,6 +130,30 @@ def uso_tecnologia_educacion():
     chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
+
+def reforzamiento_programas_sociales():
+    # Variables
+    departamentos1 = ["Lima Metropolitana", "TOTAL"]
+    departamentos2 = ["Lima", "TOTAL"]
+    final_file_name = "o6_lim - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
+
+    # ETL
+    excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales")
+    df_list = excel.worksheets_to_dataframes(False)
+    df_list = excel.normalize_orientation(dfs=df_list)
+    df_list[0] = excel.filter_data(df_list[0], departamentos1)
+    df_list[1] = excel.filter_data(df_list[1], departamentos2)
+    df_list[2] = excel.filter_data(df_list[2], departamentos2)
+    df_list[1] = excel.concat_dataframes(df_list[1], df_list[2], "Juntos", "Pension 65")
+    ic(df_list)
+
+    #Charts
+    chart_creator = ExcelAutoChart(df_list, final_file_name)
+    chart_creator.create_line_chart(index=0, sheet_name="Fig1")
+    chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping="stacked", chart_type="column")
+    chart_creator.create_table(index=3, sheet_name="Tab1")
+    chart_creator.save_workbook()
+
     
 # TODO: Second bar chart should be transposed, add param
 if __name__ == "__main__":
@@ -137,5 +161,6 @@ if __name__ == "__main__":
     #inmanejable_inflacion_departamental()
     #edificaciones_antisismicas()
     #brecha_digital()
-    brecha_digital_xl()
-    
+    #brecha_digital_xl()
+    reforzamiento_programas_sociales()
+
