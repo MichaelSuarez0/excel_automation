@@ -101,12 +101,13 @@ def edificaciones_antisismicas():
     df_list[1] = excel.filter_data(df_list[1], departamentos)
     df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores", "Temblores mayores")
     df_list[0] = df_list[0].replace("-", 0)
+    ic(df_list[0])
 
     #Charts
-    chart_creator = ExcelAutoChart(df_list, final_file_name)
-    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="column", grouping="stacked")
-    chart_creator.create_table(index=2, sheet_name="Tab1")
-    chart_creator.save_workbook()
+    # chart_creator = ExcelAutoChart(df_list, final_file_name)
+    # chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="column", grouping="stacked")
+    # chart_creator.create_table(index=2, sheet_name="Tab1")
+    # chart_creator.save_workbook()
 
 
 def uso_tecnologia_educacion():
@@ -155,6 +156,36 @@ def reforzamiento_programas_sociales():
     chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
+def infraestructura_vial():
+    # Variables
+    departamentos = [" Lima"]
+    categorias = ["% Departamental Pavimentada", "% Nacional Pavimentada", "% Vecinal Pavimentada"]
+    source_name= "Oportunidad - Infraestructura vial y ferroviara"
+    file_name = "o1_lim Mejoramiento de la infraestructura vial y ferroviaria"
+
+    # ETL
+    excel = ExcelDataExtractor(source_name)
+    df_list = excel.worksheets_to_dataframes(False)
+    df_list = excel.normalize_orientation(dfs=df_list)
+    df_list[0] = excel.filter_data(df_list[0], departamentos)
+    df_list[1] = excel.filter_data(df_list[1], departamentos)
+    df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "2014", "2024")
+    df_list = excel.normalize_orientation(dfs=df_list)
+
+    # Calcular el porcentaje de pavimentación para cada tipo de vía
+    df_list[0]['% Departamental Pavimentada'] = (df_list[0]['Departamental Pavimentada'] / df_list[0]['Departamental Total'])
+    df_list[0]['% Nacional Pavimentada'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
+    df_list[0]['% Vecinal Pavimentada'] = (df_list[0]['Vecinal Pavimentada'] / df_list[0]['Vecinal Total'])
+    df_list[0] = excel.filter_data(df_list[0], categorias)
+
+
+    # Charts
+    chart_creator = ExcelAutoChart(df_list, file_name)
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig2", grouping="standard", chart_type="bar", numeric_type="percentage", axis_title="Porcentaje")
+    chart_creator.create_table(index=2, sheet_name="Tab1")
+    chart_creator.save_workbook()
+
+
     
 # TODO: Second bar chart should be transposed, add param
 if __name__ == "__main__":
@@ -163,5 +194,7 @@ if __name__ == "__main__":
     #edificaciones_antisismicas()
     #brecha_digital()
     #brecha_digital_xl()
-    reforzamiento_programas_sociales()
+    #reforzamiento_programas_sociales()
+    infraestructura_vial()
+
 
