@@ -123,6 +123,7 @@ class ExcelDataExtractor():
                 df = df.set_index(df.columns[0]).transpose() # Manually set another index, or else the default index stays on top
                 df.reset_index(inplace=True)
                 df.columns = [index_name] + df.columns[1:].tolist()  # I loathe pandas indexes
+            df[df.columns[0]] = df[df.columns[0]].astype(str).apply(lambda x: x.strip()) # Clean blank spaces
             normalized_dfs.append(df)
         
         return normalized_dfs
@@ -131,6 +132,7 @@ class ExcelDataExtractor():
         self,
         df: pd.DataFrame,
         selected_categories: Optional[list[str]] = None,
+        filter_out: Optional[list[str]] = None
     ) -> pd.DataFrame:
         """
         Filters the input DataFrame by selecting columns based on the provided categories.
@@ -175,15 +177,25 @@ class ExcelDataExtractor():
 
         """
         if selected_categories:
-            cols = [df.columns[0]] # Start with the first column, remember labels are in Row 1
+            cols = [df.columns[0]] # Labels are in Row 1
             
             # Loop through the remaining columns and add them if they are in selected_labels
             for col in df.columns[1:]:
                 if col in selected_categories and col not in cols:  # Asegúrate de no añadir duplicados
                     cols.append(col)
             filtered_df = df[cols]
+            
+        if filter_out:
+            cols = [df.columns[0]] # Labels are in Row 1
+            
+            # Loop through the remaining columns and add them if they are in selected_labels
+            for col in df.columns[1:]:
+                if col not in filter_out and col not in cols:  # Asegúrate de no añadir duplicados
+                    cols.append(col)
+            filtered_df = df[cols]
 
         return filtered_df
+
     
     def concat_dataframes(
         self, 
@@ -196,17 +208,23 @@ class ExcelDataExtractor():
 
         df1 = pd.concat([df1, pd.DataFrame([['Tipo'] + [df1_name] * (len(df1.columns)-1)], columns=df1.columns)]).reset_index(drop=True)
         df2 = pd.concat([df2, pd.DataFrame([['Tipo'] + [df2_name] * (len(df2.columns)-1)], columns=df2.columns)]).reset_index(drop=True)
-        result_df = pd.merge(df1, df2, on="Departamento", how='outer', suffixes=('_1', '_2'))
-        
+        first_col_df1 = df1.columns[0]
+        first_col_df2 = df2.columns[0]
+
+        # Check if the first columns match before merging
+        if first_col_df1 != first_col_df2:
+            raise KeyError(f"The first columns do not match: '{first_col_df1}' and '{first_col_df2}'")
+        result_df = pd.merge(df1, df2, on=first_col_df1, how='outer', suffixes=('_1', '_2'))
+
         # Mover la fila "Tipo" al principio
         result_df = pd.concat([result_df.iloc[[-1],:], result_df.drop(result_df.index[-1], axis=0)], axis=0)
 
         # Convertir la primera fila (Tipo) en los nombres de las columnas
-        result_df.columns = result_df.iloc[0].reset_index(drop=True)
+        tipo_row = result_df[result_df.iloc[:, 0] == 'Tipo'].iloc[0]  # Encontrar la fila 'Tipo'
+        result_df.columns = tipo_row 
 
         # Eliminar la fila "Tipo"
-        result_df = result_df[result_df['Tipo'] != 'Tipo'].reset_index(drop=True)
-        print(result_df.columns)
+        result_df = result_df[result_df.iloc[:, 0] != 'Tipo'].reset_index(drop=True)
 
         return result_df
 
