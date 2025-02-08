@@ -162,3 +162,4 @@ cython_debug/
 # Folders
 charts_test/
 old_scripts/
+macros/

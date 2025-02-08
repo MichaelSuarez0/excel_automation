@@ -4,15 +4,15 @@ from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 from xlsxwriter.format import Format
 from xlsxwriter.utility import xl_range
-from excel_automation.classes.colors import Color
+from excel_automation.classes.formats.colors import Color
+from excel_automation.classes.formats.formats import ExcelFormats
 from typing import Tuple, Optional, Literal
 import numpy as np
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
-save_dir = os.path.join(script_dir, "..", "charts")
+save_dir = os.path.join(script_dir, "..", "..", "charts")
 
 
-# TODO: Set axis max and min range dynamically
 class ExcelAutoChart:
     def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart"):
         """Class to write to Excel files from DataFrames and creating charts. Engine: xlsxwriter
@@ -28,135 +28,39 @@ class ExcelAutoChart:
         self.writer = pd.ExcelWriter(os.path.join(save_dir, f'{output_name}.xlsx'), engine='xlsxwriter')
         self.workbook: Workbook = self.writer.book
         self.df_list = df_list
-        self.sheet_dfs = {}  
-        self._initialize_chart_formats()
-        self._initialize_cell_formats()
-
-    def _initialize_cell_formats(self):
-        """Crea formatos de celdas para encabezados, primera columna, números y fechas."""
-        base_borders = {
-            'border': 1,
-            'border_color': Color.WHITE.value,
-        }
-
-        self.header_format = {
-            **base_borders,
-            'bg_color': Color.BLUE_DARK.value,
-            'font_color': Color.WHITE.value,
-            'bold': True,
-            'align': 'center',
-            'valign': 'vcenter',
-        }
-
-        self.first_column_format = {
-            **base_borders,
-            'bg_color': Color.GRAY_LIGHT.value,
-        }
-
-        self.decimal1_format = {
-            'num_format': '0.0',
-            'border': 1,
-            'border_color': Color.GRAY_LIGHT.value,
-        }
-
-        self.decimal2_format = {
-            'num_format': '0.00',
-            'border': 1,
-            'border_color': Color.GRAY_LIGHT.value,
-        }
-
-        self.integer_format = {
-            'num_format': '0',
-            'border': 1,
-            'border_color': Color.GRAY_LIGHT.value,
-        }
-
-        self.percentage_format = {
-            'num_format': '0.0%',
-            'border': 1,
-            'border_color': Color.GRAY_LIGHT.value,
-        }
-
-        self.date_format = {
-            **base_borders,
-            'num_format': 'mmm-yy',
-            'bg_color': Color.GRAY_LIGHT.value,
-        }
-
-    # TODO: Test with column widths
-    # TODO: Add param for legend and adjust height if not legend
-    def _initialize_chart_formats(self):
-        line_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.ORANGE.value, Color.GREEN_DARK.value, Color.PURPLE.value, Color.GRAY.value]
-        line_simple_colors = [Color.RED.value, Color.BLUE.value, Color.BLUE_DARK.value]
-        column_colors = [Color.BLUE_DARK.value, Color.BLUE.value, Color.GREEN_DARK.value, Color.RED.value, Color.ORANGE.value, Color.YELLOW.value, Color.GRAY.value]
-        column_simple_colors = [Color.BLUE_DARK.value, Color.RED.value, Color.GRAY.value]
-        axis_base = {
-            'minor_tick_mark': 'outside',
-            'major_tick_mark': 'none',
-            'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
-        }
-
-        self.chart_formats = {
-            'line': {
-                'colors': line_colors,
-                'width': 1.75,
-                'dash_types': ['solid', 'round_dot','round_dot','round_dot','round_dot','round_dot','round_dot','round_dot']
-            },
-            'line_simple': {
-                'colors': line_simple_colors,
-                'width': 1.75,
-                'dash_types': ['round_dot', 'square_dot', 'solid']
-            },
-            'column': {
-                'colors': column_colors,
-                'width': 2.5,
-            },
-            'column_simple': {
-                'colors': column_simple_colors,
-                'width': 2.5,
-                'dash_types': ['solid']
-            },
-            'marker': {
-                'size': 6,
-                'colors': line_colors
-            },
-            'marker_simple': {
-                'size': 6,
-                'colors': line_simple_colors
-            },
-            'axis_percentage':{
-                **axis_base,
-                'name': 'Porcentaje (%)',
-                'min': 0,
-
-            },
-            'axis_number':{
-                **axis_base,
-                'name': 'Unidades',
-                'num_format': '0',
-            }
-        }
+        self.sheet_dfs = {}
+        format = ExcelFormats()
+        self.format_cells = format.format_cells
+        self.format_charts = format.format_charts
+        self.numeric_types = format.numeric_types
         
-    def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame, config: dict):
+        
+    def _apply_formatting_to_worksheet(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
         """Applies formatting only to cells with data."""
         # Set column widths
         worksheet.set_column('A:A', 15)
         if len(df.columns) > 1:
-            worksheet.set_column(1, len(df.columns) - 1, 10)
+            if len(str(df.iloc[0,1])) > 11:
+                worksheet.set_column(1, len(df.columns) - 1, 14)
+            else:
+                worksheet.set_column(1, len(df.columns) - 1, 10)
 
         # Hide gridlines
         worksheet.hide_gridlines(2)
 
-        # Determine format for the first column
+        # Determine format for the first column and adjust for datetime
         first_col = df.columns[0]
+        first_col_fmt = self.workbook.add_format(self.format_cells['first_column'])
         if pd.api.types.is_datetime64_any_dtype(df[first_col]):
-            first_col_fmt = self.date_format
-        else:
-            first_col_fmt = self.workbook.add_format(self.first_column_format)
+            first_col_fmt.set_num_format('mmm-yy')
 
         # Write headers with header format
         for col_num, col_name in enumerate(df.columns):
-            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.header_format))
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.format_cells["header"]))
+
+        # Define format for numeric data columns once
+        fmt = self.workbook.add_format(self.format_cells['data'])
+        fmt.set_num_format(num_format)
 
         # Write data cells with appropriate formats
         for row_idx in range(df.shape[0]):
@@ -172,17 +76,17 @@ class ExcelAutoChart:
                 if pd.isna(cell_value) or np.isinf(cell_value):
                     worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
                 else:
-                    # Write the valid value with the appropriate format
-                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(config))
+                    worksheet.write(row_idx + 1, col_idx, cell_value, fmt)
                 
-    def _write_to_excel(self, df: pd.DataFrame, config: dict, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
+    def _write_to_excel(self, df: pd.DataFrame, num_format:str, sheet_name: str = "ChartData", apply_format = True) -> Tuple[pd.DataFrame, Worksheet]:
         df.to_excel(self.writer, sheet_name=sheet_name, index=False)
         worksheet = self.writer.sheets[sheet_name]
         self.sheet_dfs[sheet_name] = df
         if apply_format:
-            self._apply_formatting_to_worksheet(worksheet, df, config)
+            self._apply_formatting_to_worksheet(worksheet, df, num_format)
         return df, worksheet
     
+    # TODO: Add in formats
     # TODO: Here you can define base chart configs for bar charts
     # TODO: Consider discussing chart font being Aptos Narrow
     def _create_base_chart(self, worksheet: Worksheet, chart_type: str, chart_subtype: str = ""):
@@ -203,20 +107,8 @@ class ExcelAutoChart:
         chart.set_chartarea({'border': {'none': True}})
 
         return chart
-    
-    def _define_numeric_format(self, numeric_type)-> dict:
-        if numeric_type == "integer":
-            config = self.integer_format
-        elif numeric_type == "decimal_1":
-            config = self.decimal1_format
-        elif numeric_type == "decimal_2":
-            config = self.decimal2_format
-        elif numeric_type == "percentage":
-            config = self.percentage_format
-        else:
-            raise ValueError(f"Invalid numeric_type: {numeric_type}. Valid options are 'integer', 'decimal_1', 'decimal_2', 'percentage'.")
-        return config
-
+ 
+    # TODO: Add axis in formats
     # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
             self,
@@ -247,8 +139,8 @@ class ExcelAutoChart:
             The worksheet with the inserted chart.
         """
         # Definir el formato numérico según 'numeric_type'
-        config = self._define_numeric_format(numeric_type)
-        data_df, worksheet = self._write_to_excel(self.df_list[index], config, sheet_name, config)
+        num_format: str = self.numeric_types[numeric_type]
+        data_df, worksheet = self._write_to_excel(self.df_list[index], num_format, sheet_name)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -257,13 +149,11 @@ class ExcelAutoChart:
         chart = self._create_base_chart(worksheet, 'line')
 
         if len(data_df.columns) < 5:
-            colors: list = self.chart_formats['line_simple']['colors']
-            dashes: list = self.chart_formats['line_simple']['dash_types']
-            markers: list = self.chart_formats['marker_simple']['colors']
+            format_line = self.format_charts["line_simple"]
+            colors = self.format_charts["line_simple"].get("colors", {})
         else:
-            colors: list = self.chart_formats['line']['colors']
-            dashes: list = self.chart_formats['line']['dash_types']
-            markers: list = self.chart_formats['marker']['colors']
+            format_line = self.format_charts["line"]
+            colors = self.format_charts["line"].get("colors", {})
 
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]):
@@ -271,52 +161,38 @@ class ExcelAutoChart:
             #print(f"Adding series for column {col}: {col_letter}")  # Debug
 
             series_params = {
+                **format_line,
                 'name': f"={sheet_name}!${col_letter}$1",  # Use column letter dynamically
                 'categories': f"={sheet_name}!$A$2:$A${len(data_df)+1}",
                 'values': f"={sheet_name}!${col_letter}$2:${col_letter}${len(data_df)+1}",
-                'smooth': True,
+                'fill': {'color': colors[(idx-1) % len(colors)]},
                 'data_labels': {
                     'value': True if idx in (1,2) else False,
                     'position': 'above' if idx == 1 else 'below',
-                    'num_format': config["num_format"],
+                    'num_format': num_format,
                     'font':{
-                            'color': colors[idx % len(colors)],
+                            'color': colors[(idx-1) % len(colors)],
                             }
                         },
-                'line': {
-                    'color': colors[idx % len(colors)],
-                    'width': self.chart_formats['line']['width'],
-                    'dash_type': dashes[idx % len(dashes)],
-                }
             }
 
             if markers_add:
-                marker_color = markers[idx % len(markers)]
                 series_params['marker'] = {
-                    'type': 'circle',
-                    'size': self.chart_formats['marker']['size'],
-                    'fill': {'color': marker_color},
-                    'line': {'color': marker_color},
+                    **self.format_charts["marker"]
                 }
 
             chart.add_series(series_params)
 
         # Axis configuration
         chart.set_y_axis({
+            **self.format_charts["y_axis"],
             'name': axis_title,
-            'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
-            'major_gridlines': {
-                'visible': True,
-                'line': {'color': Color.GRAY_LIGHT.value}
-            }
+            'num_format': '0%' if num_format=='0.0%' else num_format,
         })
         
         chart.set_x_axis({
-            'name': '',
+            **self.format_charts["x_axis"],
             'num_format': '0',
-            'text_axis': True,
-            'minor_tick_mark': 'outside',
-            'major_tick_mark': 'none'
         })
 
         # Insert chart with proper positioning
@@ -335,7 +211,7 @@ class ExcelAutoChart:
             sheet_name: str = "FigX",
             grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
             chart_type: Literal['bar', 'column'] = 'column',
-            numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
+            numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
             axis_title: str = ""
         ) -> Worksheet:
         """Generate a bar or column chart in Excel from data in a DataFrame list.
@@ -364,8 +240,8 @@ class ExcelAutoChart:
         ValueError
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
-        config = self._define_numeric_format(numeric_type)
-        data_df, worksheet = self._write_to_excel(self.df_list[index], config, sheet_name)
+        num_format = self.numeric_types[numeric_type]
+        data_df, worksheet = self._write_to_excel(self.df_list[index], num_format, sheet_name)
         
         # Check if DataFrame is empty
         if data_df.empty:
@@ -386,53 +262,40 @@ class ExcelAutoChart:
         # Predefined formats
         chart = self._create_base_chart(worksheet, chart_type, subtype)
 
-        if grouping == "standard" or len(data_df.columns) < 4:
-            colors: list = self.chart_formats['column_simple']['colors']
-        else:
-            colors: list = self.chart_formats['column']['colors']
-        
+        if grouping == "standard" or chart_type == "bar" or len(data_df.columns) < 4:
+            format_column = self.format_charts["column_simple"]
+            colors = self.format_charts["column_simple"].get("colors", {})
+        else: 
+            format_column = self.format_charts["column"]
+            colors = self.format_charts["column"].get("colors", {})
 
         # Add data series with color scheme
         if chart_type == "column":
             for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
                 col_idx = idx + 1  
-                color = colors[idx % len(colors)]
                 value_data = (data_df[col] != 0).all()
                 
                 series_params = {
-                    'name': [sheet_name, 0, col_idx],         
+                    **format_column,
+                    'name': [sheet_name, 0, col_idx],
                     'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
+                    'fill': {'color': colors[(idx-1) % len(colors)]},
                     'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
-                    'fill': {'color': color},
-                    'gap': 100,
-                    'data_labels': {
-                        'value': value_data,
-                        'position': 'outside_end',
-                        'num_format': config["num_format"],
-                        'font':{
-                            'bold': True,
-                            'color': Color.BLACK.value, #Color.WHITE.value if color not in (Color.YELLOW.value, Color.GRAY.value) else Color.BLACK.value,
-                            'size': 10.5
-                        }
-                    },
+                    'data_labels': {**self.format_charts["bar"].get("data_labels", {}), 'num_format': num_format, 'value': value_data},
                 }
                 chart.add_series(series_params)
                 
         elif chart_type == "bar":
             for row_idx in range(1, len(data_df) + 1):  
-                color = colors[(row_idx - 1) % len(colors)]
-                
+                print(colors[row_idx % len(colors)])
+
                 series_params = {
+                    **self.format_charts["bar"],
                     'name': [sheet_name, row_idx, 0],  
                     'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
-                    'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1],  
-                    'fill': {'color': color},
-                    'gap': 50,
-                    'data_labels': {
-                        'value': True,
-                        'position': 'outside_end',
-                        'num_format': config["num_format"]
-                    },
+                    'fill': {'color': colors[(row_idx-1) % len(colors)]},
+                    'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1], 
+                    'data_labels': {**self.format_charts["bar"].get("data_labels", {}), 'num_format': num_format},
                 }
                 chart.add_series(series_params)
             
@@ -440,34 +303,31 @@ class ExcelAutoChart:
         # Configure axes
         if chart_type == "column":
             chart.set_y_axis({
+                **self.format_charts["y_axis"],
                 'name': axis_title,
-                'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
+                'num_format': '0%' if num_format=='0.0%' else num_format,
                 'min': 0,
-                'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
             })
             chart.set_x_axis({
-                'name': '',
-                'text_axis': True,
+                **self.format_charts["x_axis"],
                 'num_format': '@',
-                'minor_tick_mark': 'outside',
-                'major_tick_mark': 'none'})
+                })
 
+        # TODO: Config properly
         elif chart_type == "bar":
             chart.set_legend({'none': True})
             chart.set_x_axis({
                 'name': axis_title,
-                'num_format': '0%' if config["num_format"]=='0.0%' else config["num_format"],
+                'num_format': '0%' if num_format=='0.0%' else num_format,
                 'min': 0,
                 'minor_tick_mark': 'outside',
                 'major_tick_mark': 'none',
                 'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
             })
             chart.set_y_axis({
-                'name': '',
-                'text_axis': True,
+                **self.format_charts["x_axis"], # Inverted
                 'num_format': '@',
-                'minor_tick_mark': 'outside',
-                'major_tick_mark': 'none',})
+                })
 
         # Insert chart with proper positioning
         position = 'E3' if len(data_df.columns[1:]) < 4 else 'J3'
@@ -497,7 +357,8 @@ class ExcelAutoChart:
             The worksheet with the inserted chart.
 
         """
-        data_df, worksheet = self._write_to_excel(self.df_list[index], {}, sheet_name, apply_format=False)
+        # Definir el formato numérico según 'numeric_type'
+        data_df, worksheet = self._write_to_excel(self.df_list[index], "", sheet_name, apply_format=False)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -510,15 +371,17 @@ class ExcelAutoChart:
         # Hide gridlines
         worksheet.hide_gridlines(2)
 
-        # Define base formats
-        gray_format = self.workbook.add_format({'bg_color': Color.GRAY_LIGHT.value, 'text_wrap': True, 'valign': 'vcenter'})
-        default_format = self.workbook.add_format({'text_wrap': True, 'valign': 'vcenter'})
-        bold_format = self.workbook.add_format({'bold': True, 'text_wrap': True, 'valign': 'vcenter'})
-        gray_bold_format = self.workbook.add_format({'bg_color': Color.GRAY_LIGHT.value, 'bold': True, 'text_wrap': True, 'valign': 'vcenter'})
-
         # Write headers with header format
         for col_num, col_name in enumerate(data_df.columns):
-            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.header_format))
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.format_cells['header']))
+
+        
+        # Modify base formats
+        gray_format = {**self.format_cells['first_column'], 'valign': 'vcenter'}
+        gray_bold_format = {**gray_format, 'bold': True}
+        default_format = {**self.format_cells['data'], 'text_wrap': True, 'valign': 'vcenter'}
+        bold_format = {**default_format, 'bold': True}
+        
 
         # Write table contents with alternating colors and bold for first column
         for row_idx in range(data_df.shape[0]):
@@ -527,9 +390,9 @@ class ExcelAutoChart:
 
                 # Select format based on column and row index
                 if col_idx == 0:
-                    cell_format = gray_bold_format if row_idx % 2 == 0 else bold_format  
+                    cell_format = self.workbook.add_format(gray_bold_format) if row_idx % 2 == 0 else self.workbook.add_format(bold_format)
                 else:
-                    cell_format = gray_format if row_idx % 2 == 0 else default_format 
+                    cell_format = self.workbook.add_format(gray_format) if row_idx % 2 == 0 else self.workbook.add_format(default_format)
 
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
 

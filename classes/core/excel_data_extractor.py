@@ -23,8 +23,8 @@ class ExcelDataExtractor():
         file_name : str
                 The name of the Excel file to be loaded (from databases folder)
         """
-        self.file_path = os.path.join(script_dir, "..", "databases", f'{file_name}.xlsx')
-        self.output_path = os.path.join(script_dir, "..", "charts")
+        self.file_path = os.path.join(script_dir, "..", "..", "databases", f'{file_name}.xlsx')
+        self.output_path = os.path.join(script_dir, "..", "..", "charts")
         self.wb = None
         self.ws = None
         self.load_workbook()
