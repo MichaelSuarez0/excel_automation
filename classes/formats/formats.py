@@ -16,10 +16,9 @@ class CellConfigs(TypedDict):
 
 
 class Formats:
-    __slots__ = ('numeric_types', 'cells', 'charts')  
-
+    
     @cached_property
-    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal1', 'decimal2', 'percentage'], str]:
+    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return NumericTypes().numeric_types
 
     @cached_property
@@ -40,12 +39,12 @@ class Formats:
 
 class NumericTypes:
     @cached_property    
-    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal1', 'decimal2', 'percentage'], Any]:
+    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], Any]:
         return {
             'date': 'mmm-yy',
             'integer': '0',
-            'decimal1': '0.0',
-            'decimal2': '0.00',
+            'decimal_1': '0.0',
+            'decimal_2': '0.00',
             'percentage': '0.0%'
         }
     
