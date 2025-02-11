@@ -1,4 +1,3 @@
-from numpy import True_
 from excel_automation.classes.formats.colors import Color
 from typing import Any, TypedDict, Literal
 from functools import cached_property
@@ -16,7 +15,7 @@ class CellConfigs(TypedDict):
 
 
 class Formats:
-    
+
     @cached_property
     def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return NumericTypes().numeric_types
@@ -34,7 +33,6 @@ class Formats:
         Any
     ]:
         return ChartFormats().charts
-
 
 
 class NumericTypes:
@@ -124,12 +122,11 @@ class ChartFormats:
     def charts(self) -> dict[
         Literal[
             'line', 
-            'line_simple', 
+            'line_simple',
+            'line_monthly,' 
             'column', 
             'column_simple', 
-            'bar', 
-            'marker', 
-            'marker_simple', 
+            'bar',  
             'y_axis', 
             'x_axis'
         ], Any]:
@@ -167,78 +164,169 @@ class ChartFormats:
 
         return {
             'line': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 420},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
                 'colors': line_colors,
-                'smooth': True,
-                'line': {
-                    'colors': line_colors,
-                    'width': 1.75,
-                    'dash_types': [
-                        'solid', 'round_dot', 'round_dot', 'round_dot',
-                        'round_dot', 'round_dot', 'round_dot', 'round_dot'
-                    ],
+                'dash_type': [
+                            'solid', 'round_dot', 'round_dot', 'round_dot',
+                            'round_dot', 'round_dot', 'round_dot', 'round_dot'
+                        ],
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },
+                'series': {
+                    'smooth': True,
+                    'line': {
+                        'width': 1.75
+                        },
+                    'marker': {
+                        'type': 'circle',
+                        'size': 6
+                    }    
                 }
             },
             'line_simple': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 420},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
                 'colors': line_simple_colors,
-                'smooth': True,
-                'line': {
-                    'colors': line_simple_colors,
-                    'width': 1.75,
-                    'dash_types': ['round_dot', 'square_dot', 'solid']
+                'dash_type': ['round_dot', 'square_dot', 'solid'],
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },    
+                'series': {
+                    'smooth': True,
+                    'line': {
+                        'width': 1.75
+                    },
+                    'marker': {
+                        'type': 'circle',
+                        'size': 6
+                    }
+                }
+            },
+            'line_monthly': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 430},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
+                'colors': line_colors,
+                'dash_type': [
+                            'round_dot', 'square_dot', 'round_dot'
+                        ],
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },
+                'series': {
+                    'smooth': True,
+                    'line': {
+                        'width': 1.75
+                        },
+                    'marker': {
+                        'none': True
+                    },
+                    'data_labels': {'value': False}
                 }
             },
             'column': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 420},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
                 'colors': column_colors,
-                'fill': {'colors': column_colors},
-                'gap': 100,
-                'data_labels': {
-                    'position': 'outside_end',
-                    'font': {
-                        'bold': True,
-                        'color': Color.BLACK.value,
-                        'size': 10.5
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },
+                'series': {
+                    'fill': {'colors': column_colors},
+                    'gap': 100,
+                    'data_labels': {
+                        'position': 'outside_end',
+                        'font': {
+                            'bold': True,
+                            'color': Color.BLACK.value,
+                            'size': 10.5
+                        }
                     }
                 }
             },
             'column_simple': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 420},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
                 'colors': column_simple_colors,
-                'fill': {'colors': column_simple_colors},
-                'gap': 100,
-                'data_labels': {
-                    'position': 'outside_end',
-                    'font': {
-                        'bold': True,
-                        'color': Color.BLACK.value,
-                        'size': 10.5
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },                
+                'series':{
+                    'gap': 100,
+                    'data_labels': {
+                        'position': 'outside_end',
+                        'font': {
+                            'bold': True,
+                            'color': Color.BLACK.value,
+                            'size': 10.5
+                        }
                     }
                 }
             },
             'bar': {
+                'title': {'name': ''},
+                'size': {'width': 600, 'height': 500},
+                'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
                 'colors': column_simple_colors,
-                'fill': {'colors': column_simple_colors},
-                'gap': 50,
-                'data_labels': {
-                    'value': True,
-                    'position': 'outside_end',
-                    'font': {
-                        'bold': True,
-                        'color': Color.BLACK.value,
-                        'size': 10.5
+                'plotarea': {
+                    'layout':{
+                        'x':      0.11,
+                        'y':      0.08,
+                        'width':  0.83,
+                        'height': 0.75
+                        }
+                },
+                'series':{
+                    'gap': 40,
+                    'data_labels': {
+                        'value': True,
+                        'position': 'outside_end',
+                        'font': {
+                            'bold': True,
+                            'color': Color.BLACK.value,
+                            'size': 10.5
+                        }
                     }
                 }
             },
-            'marker': {
-                'type': 'circle',
-                'size': 6,
-                'fill': {'color': line_colors},
-                'line': {'color': line_colors}
-            },
-            'marker_simple': {
-                'type': 'circle',
-                'size': 6,
-                'fill': {'color': line_simple_colors},
-                'line': {'color': line_simple_colors}
-            },
+
             'y_axis': {
                 'major_gridlines': {
                     'visible': True,
@@ -252,3 +340,17 @@ class ChartFormats:
                 'major_tick_mark': 'none'
             }
         }
+
+
+        # chart.set_title({'name': ''})
+        # chart.set_size({'width': 600, 'height': 420})
+        # chart.set_legend({'position': 'bottom'})
+        # chart.set_plotarea({
+        #     'layout': {
+        #         'x':      0.11,
+        #         'y':      0.09,
+        #         'width':  0.83,
+        #         'height': 0.75,
+        #     }
+        # })
+        # chart.set_chartarea({'border': {'none': True}})

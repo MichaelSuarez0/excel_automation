@@ -7,6 +7,7 @@ from excel_automation.classes.formats.formats import Formats
 from excel_automation.classes.core.excel_formatter import ExcelFormatter
 from typing import Tuple, Literal
 import numpy as np
+from icecream import ic
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "charts")
@@ -52,14 +53,15 @@ class ExcelAutoChart:
 
         return chart
  
+    # TODO: Data labels position
     # TODO: Add axis in formats
     # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
             self,
             index: int = 0,
             sheet_name: str = "LineChart",
-            markers_add: bool = True,
             numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
+            chart_template: Literal['line', 'line_simple', 'line_monthly'] = "line",
             axis_title: str = ""
         ) -> Worksheet:
         """
@@ -92,12 +94,33 @@ class ExcelAutoChart:
         
         chart = self._create_base_chart('line')
 
+        configs = self.format.charts[chart_template]
+
         if len(data_df.columns) < 5:
             format_line = self.format.charts["line_simple"]
             colors = self.format.charts["line_simple"].get("colors", {})
         else:
             format_line = self.format.charts["line"]
             colors = self.format.charts["line"].get("colors", {})
+        
+        colors = configs["colors"]
+
+        # Base chart configurations
+        chart.set_title(configs["title"])
+        chart.set_size(configs["size"])
+        chart.set_legend(configs["legend"])
+        chart.set_plotarea(configs["plotarea"])
+        chart.set_chartarea(configs["chartarea"])
+
+        if configs["series"]["marker"].get("none", False):
+            marker_config = {"none": True, "type": "none"}
+        else:
+            marker_config = {
+                **configs["series"]["marker"], 
+                'fill': {'color': colors[(idx-1) % len(colors)]},
+                'line': {'color': colors[(idx-1) % len(colors)]},
+                'type': configs["series"]["marker"].get("type", "circle")  
+            }
 
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]):
@@ -105,25 +128,25 @@ class ExcelAutoChart:
             #print(f"Adding series for column {col}: {col_letter}")  # Debug
 
             series_params = {
-                **format_line,
+                **configs["series"],
                 'name': f"={sheet_name}!${col_letter}$1",  # Use column letter dynamically
                 'categories': f"={sheet_name}!$A$2:$A${len(data_df)+1}",
                 'values': f"={sheet_name}!${col_letter}$2:${col_letter}${len(data_df)+1}",
-                'fill': {'color': colors[(idx-1) % len(colors)]},
+                'line': {
+                        'width': 1.75,
+                        'dash_type': configs["dash_type"][(idx) % len(configs["dash_type"])],
+                        'color': colors[(idx) % len(colors)],
+                        },
                 'data_labels': {
-                    'value': True if idx in (1,2) else False,
+                    'value': True if chart_template in ("line", "line_simple") else False,
                     'position': 'above' if idx == 1 else 'below',
                     'num_format': num_format,
                     'font':{
-                            'color': colors[(idx-1) % len(colors)],
+                            'color': colors[(idx) % len(colors)],
                             }
                         },
+                'marker': marker_config
             }
-
-            if markers_add:
-                series_params['marker'] = {
-                    **self.format.charts["marker"]
-                }
 
             chart.add_series(series_params)
 
@@ -147,6 +170,7 @@ class ExcelAutoChart:
         print(f"✅ Gráfico de líneas agregado a la hoja {index + 1}")
         return worksheet
     
+    # TODO: Verificar si  col_idx = idx + 1  causa problemas
     # TODO: Ordenar por secciones
     # TODO: If bar, sort ascending     
     def create_bar_chart(
@@ -233,7 +257,7 @@ class ExcelAutoChart:
             for row_idx in range(1, len(data_df) + 1):  
 
                 series_params = {
-                    **self.format.charts["bar"],
+                    **self.format.charts["bar"]["series"],
                     'name': [sheet_name, row_idx, 0],  
                     'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
                     'fill': {'color': colors[(row_idx-1) % len(colors)]},
@@ -280,6 +304,8 @@ class ExcelAutoChart:
         print(f"✅ Gráfico de barras agregado a la hoja {index + 1}")
         return worksheet
     
+    # TODO: Move formats to ExcelFormats
+    # TODO: Table font should be 10 px
     def create_table(
             self,
             index: int = 0,
@@ -308,8 +334,8 @@ class ExcelAutoChart:
             raise ValueError("DataFrame is empty. No data to plot.")
         
         # Set column widths
-        worksheet.set_column('A:A', 24)
-        worksheet.set_column('B:B', 60)
+        worksheet.set_column('A:A', 26)
+        worksheet.set_column('B:B', 54)
 
         # Hide gridlines
         worksheet.hide_gridlines(2)
