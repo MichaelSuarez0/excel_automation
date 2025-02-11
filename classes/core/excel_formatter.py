@@ -2,7 +2,6 @@ import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.formats.colors import Color
 from excel_automation.classes.formats.formats import Formats
 from typing import Tuple, Literal
 import numpy as np
@@ -60,10 +59,10 @@ class ExcelFormatter:
         worksheet.hide_gridlines(2)
 
         # Determine format for the first column and adjust for datetime
-        first_col = df.columns[0]
         first_col_fmt = self.workbook.add_format(self.format.cells['first_column'])
-        if pd.api.types.is_datetime64_any_dtype(df[first_col]):
-            first_col_fmt.set_num_format('mmm-yy')
+        # Aplicar formato de fecha en Excel si hay al menos una fecha en la columna
+        #if pd.api.types.is_datetime64_any_dtype(df.iloc[0:, 0]):
+        first_col_fmt.set_num_format('mmm-yy')
 
         # Write headers with header format
         for col_num, col_name in enumerate(df.columns):
@@ -75,9 +74,14 @@ class ExcelFormatter:
 
         # Write data cells with appropriate formats
         for row_idx in range(df.shape[0]):
-            # First column (e.g., dates or text)
             cell_value = df.iloc[row_idx, 0]
-            worksheet.write(row_idx + 1, 0, cell_value, first_col_fmt)
+            # First column (e.g., dates or text)
+            try: 
+                date_value = pd.to_datetime(cell_value)
+                excel_date = (date_value - pd.Timestamp("1899-12-30")).days
+                worksheet.write(row_idx + 1, 0, excel_date, first_col_fmt)
+            except Exception:
+                worksheet.write(row_idx + 1, 0, cell_value, first_col_fmt)
 
             # Other columns (numeric data)
             for col_idx in range(1, df.shape[1]):
