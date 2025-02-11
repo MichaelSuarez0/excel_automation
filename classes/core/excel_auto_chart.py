@@ -223,48 +223,52 @@ class ExcelAutoChart:
         }
         subtype = subtype_map.get(grouping, 'clustered')
 
+        configs = self.format.charts[chart_type]
+
         # Validate chart type
         if chart_type not in {"column", "bar"}:
             raise ValueError("Invalid chart_type. Use 'column' (vertical) or 'bar' (horizontal).")
-
+        
         # Predefined formats
         chart = self._create_base_chart(chart_type, subtype)
 
-        if grouping == "standard" or chart_type == "bar" or len(data_df.columns) < 4:
-            format_column = self.format.charts["column_simple"]
-            colors = self.format.charts["column_simple"].get("colors", {})
-        else: 
-            format_column = self.format.charts["column"]
-            colors = self.format.charts["column"].get("colors", {})
+        # Base chart configurations
+        chart.set_title(configs["title"])
+        chart.set_size(configs["size"])
+        chart.set_legend(configs["legend"])
+        chart.set_plotarea(configs["plotarea"])
+        chart.set_chartarea(configs["chartarea"])
+
+        colors = configs['colors']
 
         # Add data series with color scheme
-        if chart_type == "column":
-            for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
-                col_idx = idx + 1  
-                value_data = (data_df[col] != 0).all()
-                
-                series_params = {
-                    **format_column,
-                    'name': [sheet_name, 0, col_idx],
-                    'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
-                    'fill': {'color': colors[(idx-1) % len(colors)]},
-                    'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
-                    'data_labels': {**self.format.charts["bar"].get("data_labels", {}), 'num_format': num_format, 'value': value_data},
-                }
-                chart.add_series(series_params)
-                
-        elif chart_type == "bar":
-            for row_idx in range(1, len(data_df) + 1):  
+        for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
+            col_idx = idx + 1  
+            value_data = (data_df[col] != 0).all()
+            
+            series_params = {
+                **configs['series'],
+                'name': [sheet_name, 0, col_idx],
+                'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
+                'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
+                'fill': {'color': colors[(col_idx-1) % len(colors)]},
+                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format, 'value': value_data},
+            }
+            chart.add_series(series_params)
 
-                series_params = {
-                    **self.format.charts["bar"]["series"],
-                    'name': [sheet_name, row_idx, 0],  
-                    'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
-                    'fill': {'color': colors[(row_idx-1) % len(colors)]},
-                    'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1], 
-                    'data_labels': {**self.format.charts["bar"].get("data_labels", {}), 'num_format': num_format},
-                }
-                chart.add_series(series_params)
+       
+        # elif chart_type == "bar":
+        #     for row_idx in range(1, len(data_df) + 1):  
+
+        #         series_params = {
+        #             **configs['series'],
+        #             'name': [sheet_name, row_idx, 0],  
+        #             'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
+        #             'fill': {'color': colors[(row_idx-1) % len(colors)]},
+        #             'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1], 
+        #             'data_labels': {**configs['series']['data_labels'], 'num_format': num_format},
+        #         }
+        #         chart.add_series(series_params)
             
         # TODO: Move to initialize
         # Configure axes
@@ -280,16 +284,15 @@ class ExcelAutoChart:
                 'num_format': '@',
                 })
 
-        # TODO: Config properly
+        # TODO: Add in formats
         elif chart_type == "bar":
             chart.set_legend({'none': True})
             chart.set_x_axis({
                 'name': axis_title,
-                'num_format': '0%' if num_format=='0.0%' else num_format,
-                'min': 0,
-                'minor_tick_mark': 'outside',
+                'visible': False,
+                'line': {'none': True},
                 'major_tick_mark': 'none',
-                'major_gridlines': {'visible': True, 'line': {'color': Color.GRAY_LIGHT.value}}
+                'major_gridlines': {'visible': False}
             })
             chart.set_y_axis({
                 **self.format.charts["x_axis"], # Inverted
