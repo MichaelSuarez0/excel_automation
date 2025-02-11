@@ -3,30 +3,7 @@ from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 from icecream import ic
 import pprint
 import pandas as pd
-import timeit
 from functools import wraps
-from typing import Callable, Any, TypeVar
-
-# Definir un tipo genérico para el retorno de la función
-F = TypeVar("F", bound=Callable[..., Any])
-def medir_tiempo(func: F) -> F:
-    """
-    Decorador para medir el tiempo de las funciones
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        inicio = timeit.default_timer()
-        resultado = func(*args, **kwargs)
-        fin = timeit.default_timer()
-        tiempo_transcurrido = fin - inicio
-        minutos = tiempo_transcurrido // 60 if tiempo_transcurrido > 60 else 0
-        segundos = tiempo_transcurrido % 60
-
-        # Registrar tiempo de ejecución
-        print(f"La función '{func.__name__}' tardó {minutos} minutos y {segundos:.2f} segundos en ejecutarse.")
-
-        return resultado
-    return wrapper
 
 # ====================================================== #
 # ================== Oportunidades ===================== #
@@ -156,6 +133,7 @@ def reforzamiento_programas_sociales():
     chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
+
 def infraestructura_vial():
     # Variables
     departamentos = [" Lima"]
@@ -186,6 +164,26 @@ def infraestructura_vial():
     chart_creator.save_workbook()
 
 
+def bellezas_naturales():
+    # Variables
+    #departamentos1 = ["Lima Metropolitana", "Total"]
+    final_file_name = "o10_lim - Aprovechamiento de las bellezas naturales y arqueológicas departamentales"
+
+    # ETL
+    excel = ExcelDataExtractor("Oportunidad - Bellezas naturales")
+    df_list = excel.worksheets_to_dataframes(False)
+    df_list = excel.normalize_orientation(dfs=df_list)
+
+    # Charts
+    chart_creator = ExcelAutoChart(df_list, final_file_name)
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", chart_type="bar", numeric_type="integer")
+    chart_creator.create_table(index=1, sheet_name="Tab1")
+    chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly")
+    chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly")
+    
+    chart_creator.save_workbook()
+
+
     
 # TODO: Second bar chart should be transposed, add param
 if __name__ == "__main__":
@@ -194,6 +192,7 @@ if __name__ == "__main__":
     #brecha_digital()
     #brecha_digital_xl()
     #reforzamiento_programas_sociales()
-    infraestructura_vial()
+    #infraestructura_vial()
+    bellezas_naturales()
 
 
