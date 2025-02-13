@@ -1,17 +1,12 @@
-import re
 import os
 import pandas as pd
 import openpyxl
 from icecream import ic
 import logging
-import datetime
 import pandas as pd
 from typing import Tuple, Optional
 
-
 script_dir = os.path.abspath(os.path.dirname(__file__))
-#macros_folder = os.path.join(script_dir, "..", "macros", "excel")
-save_dir = os.path.join(script_dir, "..", "charts")
 
 class ExcelDataExtractor():
     def __init__(self, file_name: str):
@@ -40,7 +35,10 @@ class ExcelDataExtractor():
         Args:
             name (str, optional): Choose a name for your Excel file. Defaults to "excel_test".
         """
-        self.wb.save(self.output_path)
+        if not output_name:
+            self.wb.save(self.output_path)
+        else:
+            self.wb.save(os.path.join)
         print(f'✅ Excel guardado como "{self.output_path}"')
 
     # def open_new_workbook(self, ws_name: str = None) -> Tuple[Workbook, Worksheet]:
@@ -89,10 +87,15 @@ class ExcelDataExtractor():
         dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This method reads all sheets at once a returns a dictionary of DataFrames
         sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
         dfs = [dfs_dict[name] for name in sheet_names]
+        for df in dfs:
+            if isinstance(df.iloc[0,1], str):
+                df.iloc[0, :] = df.iloc[0, :].str.strip()  # Limpia la primera fila
+            if isinstance(df.iloc[1,0], str):
+                df[df.columns[0]] = df[df.columns[0]].str.strip()  # Limpia la primera columa
         return dfs
     
     # Transformation methods
-    def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> list[pd.DataFrame]:
+    def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> pd.DataFrame | list[pd.DataFrame]:
         """
         Normalizes the orientation of one or more DataFrames. Converts to list if a single DataFrame is provided.
 
@@ -103,8 +106,8 @@ class ExcelDataExtractor():
 
         Returns:
         -------
-        list[pd.DataFrame]
-            A list of normalized DataFrames with the correct orientation.
+        pd.DataFrame | list[pd.DataFrame]
+            A normalized DataFrame if a single DataFrame was passed, or a list of normalized DataFrames if a list was passed.
         
         Raises:
         ------
@@ -117,14 +120,17 @@ class ExcelDataExtractor():
             dfs= [dfs]
         normalized_dfs = []
         for df in dfs:
-            # Check if the first row contains categories. If it does, it will transpose the df.
-            if not isinstance(df.iloc[0, 1], str):
+            # If headers are not strings (categories), df will be transposed.
+            if isinstance(df.iloc[1,0], str) and not df.shape[1] < 3: # Consider using as well if not isinstance(df.columns[1], str)
                 index_name = df.columns[0]
                 df = df.set_index(df.columns[0]).transpose() # Manually set another index, or else the default index stays on top
                 df.reset_index(inplace=True)
                 df.columns = [index_name] + df.columns[1:].tolist()  # I loathe pandas indexes
-            df[df.columns[0]] = df[df.columns[0]].astype(str).apply(lambda x: x.strip()) # Clean blank spaces
             normalized_dfs.append(df)
+        
+        # If a single DataFrame was passed, return just that DataFrame.
+        if len(normalized_dfs) == 1:
+            return normalized_dfs[0]
         
         return normalized_dfs
     
