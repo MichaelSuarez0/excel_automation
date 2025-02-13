@@ -16,13 +16,12 @@ class CellConfigs(TypedDict):
 
 
 class Formats:
-
     @cached_property
     def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return NumericTypes().numeric_types
 
     @cached_property
-    def cells(self) -> dict[Literal['database', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
         return CellFormats().cells
 
     @cached_property
@@ -50,7 +49,7 @@ class NumericTypes:
 
 class CellFormats:
     @cached_property
-    def cells(self) -> dict[Literal['database', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[Literal['database', 'data_table', 'text_table', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
         """Carga y almacena formatos de celdas para hojas que contienen datos (database e index)"""
         white_borders = {
             'border': 1,
@@ -78,7 +77,59 @@ class CellFormats:
                 'data': {
                     'border': 1,
                     'border_color': Color.GRAY_LIGHT.value,
+                    'valign': 'vcenter',
+                    'font_size': 10
+                }
+            },
+            'text_table': {
+                'header': {
+                    **white_borders,
+                    'bg_color': Color.BLUE_DARK.value,
+                    'font_color': Color.WHITE.value,
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'text_wrap': True,
+                    'font_size': 10
+                },
+                'first_column': {
+                    **white_borders,
+                    'bg_color': Color.GRAY_LIGHT.value,
+                    'text_wrap': True,
+                    'font_size': 10
+                },
+                'data': {
+                    'border': 1,
+                    'border_color': Color.GRAY_LIGHT.value,
+                    'align': 'justify',
                     'valign': 'center',
+                    'font_size': 10
+                }
+            },
+            'data_table': {
+                'header': {
+                    **white_borders,
+                    'bg_color': Color.BLUE_DARK.value,
+                    'font_color': Color.WHITE.value,
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'text_wrap': True,
+                    'font_size': 10
+                },
+                'first_column': {
+                    **white_borders,
+                    'bg_color': Color.GRAY_LIGHT.value,
+                    'text_wrap': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'font_size': 10
+                },
+                'data': {
+                    'border': 1,
+                    'border_color': Color.GRAY_LIGHT.value,
+                    'align': 'center',
+                    'valign': 'vcenter',
                     'font_size': 10
                 }
             },
@@ -298,7 +349,7 @@ class ChartFormats:
             },
             'bar': {
                 'title': {'name': ''},
-                'size': {'width': 570, 'height': 350},
+                'size': {'width': 570, 'height': 340},
                 'legend': {'position': 'bottom'},
                 'chartarea': {'border': {'none': True}},
                 'colors': bar_colors,
@@ -311,7 +362,7 @@ class ChartFormats:
                         }
                 },
                 'series':{
-                    'gap': 50,
+                    'gap': 60,
                     'data_labels': {
                         'value': True,
                         'position': 'outside_end',
