@@ -136,31 +136,43 @@ def reforzamiento_programas_sociales():
 
 def infraestructura_vial():
     # Variables
-    departamentos = [" Lima"]
-    categorias = ["% Departamental Pavimentada", "% Nacional Pavimentada", "% Vecinal Pavimentada"]
+    departamentos = ["Lima"]
+    categorias = ["Vecinal", "Departamental", "Nacional"]
+    years = list(range(2014, 2025)) # No incluye 2025
+    years = list(map(lambda x: str(x), years))
+    categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
     source_name= "Oportunidad - Infraestructura vial y ferroviara"
     file_name = "o1_lim Mejoramiento de la infraestructura vial y ferroviaria"
 
     # ETL
     excel = ExcelDataExtractor(source_name)
     df_list = excel.worksheets_to_dataframes(False)
-    df_list = excel.normalize_orientation(dfs=df_list)
+
+    for id, df in enumerate(df_list[3:], start=3):
+        df = excel.filter_data(df, categorias2)
+        df = excel.normalize_orientation(df)
+        df = excel.filter_data(df, departamentos)
+        df_list[id] = df
+    df_list[3] = excel.concat_multiple_dataframes(df_list[3:], df_names=years)
+    df_list[0] = excel.normalize_orientation(df_list[0])
+    df_list[1] = excel.normalize_orientation(df_list[1])
     df_list[0] = excel.filter_data(df_list[0], departamentos)
     df_list[1] = excel.filter_data(df_list[1], departamentos)
     df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "2014", "2024")
-    df_list = excel.normalize_orientation(dfs=df_list)
+    df_list[0] = excel.normalize_orientation(df_list[0])
 
     # Calcular el porcentaje de pavimentación para cada tipo de vía
-    df_list[0]['% Departamental Pavimentada'] = (df_list[0]['Departamental Pavimentada'] / df_list[0]['Departamental Total'])
-    df_list[0]['% Nacional Pavimentada'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
-    df_list[0]['% Vecinal Pavimentada'] = (df_list[0]['Vecinal Pavimentada'] / df_list[0]['Vecinal Total'])
+    df_list[0]['Vecinal'] = (df_list[0]['Vecinal Pavimentada'] / df_list[0]['Vecinal Total'])
+    df_list[0]['Nacional'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
+    df_list[0]['Departamental'] = (df_list[0]['Departamental Pavimentada'] / df_list[0]['Departamental Total'])
     df_list[0] = excel.filter_data(df_list[0], categorias)
+    df_list[0] = excel.normalize_orientation(dfs=df_list[0])
 
-
-    # Charts
+    # # Charts
     chart_creator = ExcelAutoChart(df_list, file_name)
-    chart_creator.create_bar_chart(index=0, sheet_name="Fig2", grouping="standard", chart_type="bar", numeric_type="percentage", axis_title="Porcentaje")
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig2", grouping="standard", chart_type="bar", numeric_type="percentage", chart_template="bar")
     chart_creator.create_table(index=2, sheet_name="Tab1")
+    chart_creator.create_table(index=3, sheet_name="Tab2")
     chart_creator.save_workbook()
 
 
@@ -192,7 +204,7 @@ if __name__ == "__main__":
     #brecha_digital()
     #brecha_digital_xl()
     #reforzamiento_programas_sociales()
-    #infraestructura_vial()
-    bellezas_naturales()
+    infraestructura_vial()
+    #bellezas_naturales()
 
 
