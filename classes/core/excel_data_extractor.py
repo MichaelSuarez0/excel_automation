@@ -83,15 +83,18 @@ class ExcelDataExtractor():
         return df
     
     def worksheets_to_dataframes(self, include_first = False) -> list[pd.DataFrame]:
-        """Reads all sheets at once and returns a list of DataFrames, may specify to skip first"""
-        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This method reads all sheets at once a returns a dictionary of DataFrames
+        """Reads all sheets at once and returns a list of DataFrames, may specify to skip first worksheet"""
+        # This method reads all sheets at once a returns a dictionary of DataFrames with keys:values -> sheet_name:df
+        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) 
         sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
         dfs = [dfs_dict[name] for name in sheet_names]
+        dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
+        # Limpia las cadenas de todas las columnas de tipo 'object' de una vez
+        # Quitar espacios sobrantes de las columnas de tipo strin
         for df in dfs:
-            if isinstance(df.iloc[0,1], str):
-                df.iloc[0, :] = df.iloc[0, :].str.strip()  # Limpia la primera fila
-            if isinstance(df.iloc[1,0], str):
-                df[df.columns[0]] = df[df.columns[0]].str.strip()  # Limpia la primera columa
+            object_columns = df.select_dtypes(include=['object']).columns
+            for col in object_columns:
+                df[col] = df[col].str.strip()
         return dfs
     
     # Transformation methods
@@ -232,6 +235,85 @@ class ExcelDataExtractor():
         # Eliminar la fila "Tipo"
         result_df = result_df[result_df.iloc[:, 0] != 'Tipo'].reset_index(drop=True)
 
+        return result_df
+    
+    def concat_multiple_dataframes(
+        self,
+        dfs: list[pd.DataFrame],
+        df_names: list[str]
+    ) -> pd.DataFrame:
+        """
+        Concatena múltiples DataFrames y añade sus nombres como identificadores.
+
+        Parameters
+        ----------
+        dfs : list[pd.DataFrame]
+            Lista de DataFrames a concatenar.
+        df_names : list[str]
+            Lista de nombres correspondientes a cada DataFrame.
+
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame resultante con todos los datos combinados.
+
+        Raises
+        ------
+        ValueError
+            Si el número de DataFrames no coincide con el número de nombres o
+            si hay menos de 2 DataFrames.
+        KeyError
+            Si los DataFrames no tienen la misma primera columna.
+        """
+        if len(dfs) != len(df_names):
+            raise ValueError("El número de DataFrames debe coincidir con el número de nombres")
+        
+        if len(dfs) < 2:
+            raise ValueError("Se necesitan al menos 2 DataFrames para concatenar")
+        
+        # Verificar que todos los DataFrames tengan la misma primera columna
+        first_col = dfs[0].columns[0]
+        for df in dfs[1:]:
+            if df.columns[0] != first_col:
+                raise KeyError(f"Todos los DataFrames deben tener '{first_col}' como primera columna")
+        
+        # Renombrar las columnas para evitar duplicados
+        for i, df in enumerate(dfs):
+            df.columns = [f"{col}_{df_names[i]}" if col != first_col else col for col in df.columns]
+        
+        # Procesar cada DataFrame añadiendo la fila de tipo
+        processed_dfs = []
+        for df, name in zip(dfs, df_names):
+            processed_df = pd.concat([
+                df,
+                pd.DataFrame([['Tipo'] + [name] * (len(df.columns)-1)], columns=df.columns)
+            ]).reset_index(drop=True)
+            processed_dfs.append(processed_df)
+        
+        # Realizar el merge de todos los DataFrames
+        result_df = processed_dfs[0]
+        for df in processed_dfs[1:]:
+            result_df = pd.merge(
+                result_df,
+                df,
+                on=first_col,
+                how='outer',
+                suffixes=('_left', '_right')
+            )
+        
+        # Mover la fila "Tipo" al principio
+        result_df = pd.concat([
+            result_df[result_df.iloc[:, 0] == 'Tipo'],
+            result_df[result_df.iloc[:, 0] != 'Tipo']
+        ]).reset_index(drop=True)
+        
+        # Convertir la primera fila (Tipo) en los nombres de las columnas
+        tipo_row = result_df.iloc[0]
+        result_df.columns = tipo_row
+        
+        # Eliminar la fila "Tipo"
+        result_df = result_df[result_df.iloc[:, 0] != 'Tipo'].reset_index(drop=True)
+        
         return result_df
 
     # Writing methods (simple)
