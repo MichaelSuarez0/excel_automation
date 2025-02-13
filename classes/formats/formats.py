@@ -6,6 +6,7 @@ from functools import cached_property
 class CellConfigs(TypedDict):
     bg_color: str
     font_color: str
+    font_size: int
     bold: bool
     align: str
     valign: str
@@ -21,8 +22,8 @@ class Formats:
         return NumericTypes().numeric_types
 
     @cached_property
-    def cells(self) -> dict[Literal['header', 'first_column', 'data'], CellConfigs]:
-        return CellFormats().database
+    def cells(self) -> dict[Literal['database', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+        return CellFormats().cells
 
     @cached_property
     def charts(self) -> dict[
@@ -49,70 +50,60 @@ class NumericTypes:
 
 class CellFormats:
     @cached_property
-    def database(self) -> dict[Literal['header', 'first_column', 'data'], CellConfigs]:
-        """Carga y almacena formatos de celdas para hojas que contienen datos"""
+    def cells(self) -> dict[Literal['database', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+        """Carga y almacena formatos de celdas para hojas que contienen datos (database e index)"""
         white_borders = {
             'border': 1,
             'border_color': Color.WHITE.value,
         }
 
-        return {
-            'header' : {
-                **white_borders,
-                'bg_color': Color.BLUE_DARK.value,
-                'font_color': Color.WHITE.value,
-                'bold': True,
-                'align': 'center',
-                'valign': 'vcenter',
-                'text_wrap': True
+        return { 
+            'database': {
+                'header': {
+                    **white_borders,
+                    'bg_color': Color.BLUE_DARK.value,
+                    'font_color': Color.WHITE.value,
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'text_wrap': True,
+                    'font_size': 10
+                },
+                'first_column': {
+                    **white_borders,
+                    'bg_color': Color.GRAY_LIGHT.value,
+                    'text_wrap': True,
+                    'font_size': 10
+                },
+                'data': {
+                    'border': 1,
+                    'border_color': Color.GRAY_LIGHT.value,
+                    'valign': 'center',
+                    'font_size': 10
+                }
             },
-
-            'first_column': {
-                **white_borders,
-                'bg_color': Color.GRAY_LIGHT.value,
-                'text_wrap': True
-            },
-
-            'data': {
-                'border': 1,
-                'border_color': Color.GRAY_LIGHT.value,
-            },
-        
+            'index': {
+                'header': {
+                    **white_borders,
+                    'bg_color': Color.BLUE_DARK.value,
+                    'font_color': Color.WHITE.value,
+                    'bold': True,
+                    'align': 'center',
+                    'valign': 'vcenter',
+                    'text_wrap': True
+                },
+                'first_column': {
+                    **white_borders,
+                    'bg_color': Color.GRAY_LIGHT.value,
+                    'text_wrap': True
+                },
+                'data': {
+                    'border': 1,
+                    'border_color': Color.GRAY_LIGHT.value,
+                    'valign': 'center'
+                }
+            }
         }
-    
-
-    @cached_property       
-    def index(self) -> dict[Literal['header', 'first_column', 'data'], CellConfigs]:
-        """Carga y almacena formatos de celdas para hojas de índices"""
-        white_borders = {
-            'border': 1,
-            'border_color': Color.WHITE.value,
-        }
-
-        return {
-            'header' : {
-                **white_borders,
-                'bg_color': Color.BLUE_DARK.value,
-                'font_color': Color.WHITE.value,
-                'bold': True,
-                'align': 'center',
-                'valign': 'vcenter',
-                'text_wrap': True
-            },
-
-            'first_column': {
-                **white_borders,
-                'bg_color': Color.GRAY_LIGHT.value,
-                'text_wrap': True
-            },
-
-            'data': {
-                'border': 1,
-                'border_color': Color.GRAY_LIGHT.value,
-            },
-        
-        }
-
 
 # TODO: Test with column widths
 # TODO: Add param for legend and adjust height if not legend
@@ -127,6 +118,7 @@ class ChartFormats:
             'column', 
             'column_simple', 
             'bar',  
+            'bar_single', 
             'y_axis', 
             'x_axis'
         ], Any]:
@@ -144,8 +136,8 @@ class ChartFormats:
         ]
         line_simple_colors = [
             Color.RED.value, 
+            Color.BLUE_DARK.value,
             Color.BLUE.value, 
-            Color.BLUE_DARK.value
         ]
         column_colors = [
             Color.BLUE_DARK.value, 
@@ -160,6 +152,11 @@ class ChartFormats:
             Color.BLUE_DARK.value, 
             Color.RED.value, 
             Color.GRAY.value
+        ]
+        bar_colors = [
+            Color.RED.value, 
+            Color.BLUE_DARK.value, 
+            Color.YELLOW.value
         ]
 
         return {
@@ -194,7 +191,7 @@ class ChartFormats:
             },
             'line_simple': {
                 'title': {'name': ''},
-                'size': {'width': 600, 'height': 420},
+                'size': {'width': 580, 'height': 420},
                 'legend': {'position': 'bottom'},
                 'chartarea': {'border': {'none': True}},
                 'colors': line_simple_colors,
@@ -220,18 +217,18 @@ class ChartFormats:
             },
             'line_monthly': {
                 'title': {'name': ''},
-                'size': {'width': 600, 'height': 430},
+                'size': {'width': 580, 'height': 360},
                 'legend': {'position': 'bottom'},
                 'chartarea': {'border': {'none': True}},
-                'colors': line_colors,
+                'colors': line_simple_colors,
                 'dash_type': [
-                            'round_dot', 'square_dot', 'round_dot'
+                            'square_dot', 'square_dot', 'round_dot'
                         ],
                 'plotarea': {
                     'layout':{
                         'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
+                        'y':      0.06,
+                        'width':  0.85,
                         'height': 0.75
                         }
                 },
@@ -248,7 +245,7 @@ class ChartFormats:
             },
             'column': {
                 'title': {'name': ''},
-                'size': {'width': 600, 'height': 420},
+                'size': {'width': 580, 'height': 420},
                 'legend': {'position': 'bottom'},
                 'chartarea': {'border': {'none': True}},
                 'colors': column_colors,
@@ -301,16 +298,44 @@ class ChartFormats:
             },
             'bar': {
                 'title': {'name': ''},
-                'size': {'width': 600, 'height': 500},
+                'size': {'width': 570, 'height': 350},
                 'legend': {'position': 'bottom'},
+                'chartarea': {'border': {'none': True}},
+                'colors': bar_colors,
+                'plotarea': {
+                    'layout':{
+                        'x':      0.01,
+                        'y':      0.03,
+                        'width':  0.80,
+                        'height': 0.89
+                        }
+                },
+                'series':{
+                    'gap': 50,
+                    'data_labels': {
+                        'value': True,
+                        'position': 'outside_end',
+                        'font': {
+                            'bold': True,
+                            'color': Color.BLACK.value,
+                            'size': 10
+                        }
+                    }
+                }
+            },
+
+            'bar_single': {
+                'title': {'name': ''},
+                'size': {'width': 570, 'height': 460},
+                'legend': {'none': True},
                 'chartarea': {'border': {'none': True}},
                 'colors': column_simple_colors,
                 'plotarea': {
                     'layout':{
-                        'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
-                        'height': 0.75
+                        'x':      0.01,
+                        'y':      0.03,
+                        'width':  0.80,
+                        'height': 0.94
                         }
                 },
                 'series':{
@@ -321,7 +346,7 @@ class ChartFormats:
                         'font': {
                             'bold': True,
                             'color': Color.BLACK.value,
-                            'size': 10.5
+                            'size': 10
                         }
                     }
                 }
