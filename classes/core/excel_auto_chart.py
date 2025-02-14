@@ -116,20 +116,20 @@ class ExcelAutoChart:
         chart.set_plotarea(configs["plotarea"])
         chart.set_chartarea(configs["chartarea"])
 
-        if configs["series"]["marker"].get("none", False):
-            marker_config = {"none": True, "type": "none"}
-        else:
-            marker_config = {
-                **configs["series"]["marker"], 
-                'fill': {'color': colors[(idx-1) % len(colors)]},
-                'line': {'color': colors[(idx-1) % len(colors)]},
-                'type': configs["series"]["marker"].get("type", "circle")  
-            }
-
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]):
             col_letter = chr(66 + idx)  # Get column letter (e.g., B, C, D, ...)
             #print(f"Adding series for column {col}: {col_letter}")  # Debug
+
+            if configs["series"]["marker"].get("none", False):
+                marker_config = {"none": True, "type": "none"}
+            else:
+                marker_config = {
+                    **configs["series"]["marker"], 
+                    'fill': {'color': colors[(idx) % len(colors)]},
+                    'line': {'color': colors[(idx) % len(colors)]},
+                    'type': configs["series"]["marker"].get("type", "circle")  
+                }
 
             series_params = {
                 **configs["series"],
@@ -315,67 +315,54 @@ class ExcelAutoChart:
         print(f"✅ Gráfico de barras agregado a la hoja {index + 1}")
         return worksheet
     
-    # TODO: Move formats to ExcelFormats
-    # TODO: Table font should be 10 px
     def create_table(
-            self,
-            index: int = 0,
-            sheet_name: str = "TabX",
-        ) -> Worksheet:
-        """Generate a bar or column chart in Excel from a DataFrame.
+        self,
+        index: int = 0,
+        sheet_name: str = "TabX",
+        chart_template: Literal["index", "data_table", "text_table"] = "text_table",
+        numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
+    ) -> Worksheet:
+        """
+        Generates a table in an Excel worksheet based on a DataFrame from the given list of DataFrames.
+        Optionally formats the numeric values and applies a specific chart template.
 
         Parameters
         ----------
         index : int, optional
-            Index of the DataFrame in df_list to use (default is 0).
+            The index of the DataFrame in `df_list` to use (default is 0).
         sheet_name : str, optional
-            Name of the worksheet (default is "TabX").
+            The name of the worksheet where the table will be inserted (default is "TabX").
+        chart_template : {'index', 'data_table', 'text_table'}, optional
+            The type of chart template to apply to the table (default is 'text_table').
+        numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
+            The numeric format for the values in the table (default is 'decimal_1').
 
         Returns
         -------
         Worksheet
-            The worksheet with the inserted chart.
+            The worksheet with the inserted table and chart.
 
+        Raises
+        ------
+        ValueError
+            If the selected DataFrame is empty, a ValueError is raised indicating that there is no data to plot.
         """
-        # Definir el formato numérico según 'numeric_type'
-        data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, "", format= "database")
-        fmt = self.format.cells['database']
+        num_format = self.format.numeric_types[numeric_type]
+        
+        # Retrieve the DataFrame and the corresponding worksheet
+        data_df, worksheet = self.writer._write_to_excel(
+            df = self.df_list[index],
+            sheet_name = sheet_name,
+            num_format = num_format,
+            format_template = chart_template
+        )
 
         # Check if the DataFrame is empty
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
-        
-        # Set column widths
-        worksheet.set_column('A:A', 26)
-        worksheet.set_column('B:B', 54)
 
         # Hide gridlines
         worksheet.hide_gridlines(2)
-
-        # Write headers with header format
-        for col_num, col_name in enumerate(data_df.columns):
-            worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt['header']))
-
-        
-        # Modify base formats
-        gray_format = {**fmt['first_column'], 'valign': 'vcenter'}
-        gray_bold_format = {**gray_format, 'bold': True}
-        default_format = {**fmt['data'], 'text_wrap': True, 'valign': 'vcenter'}
-        bold_format = {**default_format, 'bold': True}
-        
-
-        # Write table contents with alternating colors and bold for first column
-        for row_idx in range(data_df.shape[0]):
-            for col_idx in range(data_df.shape[1]):
-                cell_value = data_df.iloc[row_idx, col_idx]
-
-                # Select format based on column and row index
-                if col_idx == 0:
-                    cell_format = self.workbook.add_format(gray_bold_format) if row_idx % 2 == 0 else self.workbook.add_format(bold_format)
-                else:
-                    cell_format = self.workbook.add_format(gray_format) if row_idx % 2 == 0 else self.workbook.add_format(default_format)
-
-                worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
 
         print(f"✅ Tabla agregada en la hoja {index + 1}")
         return worksheet
