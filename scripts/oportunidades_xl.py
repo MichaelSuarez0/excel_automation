@@ -94,8 +94,6 @@ def infraestructura_vial_xl():
         chart_creator.save_workbook()
 
 
-
-
 def reforzamiento_programas_sociales_xl():
     # Variables
     # Falta Callao porque no tiene registros de Juntos en 2017 ni en 2024; también Lima Metropolitana (se escogió solo Región)
@@ -128,8 +126,37 @@ def reforzamiento_programas_sociales_xl():
         chart_creator.save_workbook()
 
 
+def edificaciones_antisismicas_xl():
+    # Variables
+    # Faltan Lima Metro y Callao
+    departamentos = ["Lima", "Tacna", "Moquegua", "Arequipa", "Ica", "La Libertad", "Tumbes", "Apurímac",
+                      "Lambayeque", "Áncash", "Piura", ]
+    file_name_base = "o5_{} - Mayor construcción de edificaciones antisísmicas"
+
+    # ETL
+    excel = ExcelDataExtractor("Oportunidad - Edificaciones antisismicas")
+    dfs = excel.worksheets_to_dataframes(False)
+    dfs = excel.normalize_orientation(dfs)
+
+    for dpto in departamentos:
+        departamento = [dpto]
+        df_list = dfs.copy()
+        file_name_final = file_name_base.format(dpto[:3].lower())
+        df_list[0] = excel.filter_data(df_list[0], departamento)
+        df_list[1] = excel.filter_data(df_list[1], departamento)
+        df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores", "Temblores mayores")
+        df_list[0] = df_list[0].replace("-", 0)
+
+        #Charts
+        chart_creator = ExcelAutoChart(df_list, file_name_final)
+        chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", chart_template="column_simple", axis_title="Unidades")
+        chart_creator.create_table(index=2, sheet_name="Tab1")
+        chart_creator.save_workbook()
+
+
 if __name__ == "__main__":
     #brecha_digital_xl()
     #infraestructura_vial_xl()
-    reforzamiento_programas_sociales_xl()
+    #reforzamiento_programas_sociales_xl()
+    edificaciones_antisismicas_xl()
     
