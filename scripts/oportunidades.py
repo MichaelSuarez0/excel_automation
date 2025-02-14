@@ -2,7 +2,6 @@ from excel_automation.classes.core.excel_data_extractor import ExcelDataExtracto
 from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 from icecream import ic
 import pprint
-import pandas as pd
 from functools import wraps
 
 # ====================================================== #
@@ -163,16 +162,19 @@ def infraestructura_vial():
 
     # Calcular el porcentaje de pavimentación para cada tipo de vía
     df_list[0]['Vecinal'] = (df_list[0]['Vecinal Pavimentada'] / df_list[0]['Vecinal Total'])
-    df_list[0]['Nacional'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
     df_list[0]['Departamental'] = (df_list[0]['Departamental Pavimentada'] / df_list[0]['Departamental Total'])
+    df_list[0]['Nacional'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
     df_list[0] = excel.filter_data(df_list[0], categorias)
     df_list[0] = excel.normalize_orientation(dfs=df_list[0])
 
-    # # Charts
+    # Calcular variación en la construcción de filas
+    df_list[3]['Var %'] = ((df_list[3]['2024'] - df_list[3]['2015']) / df_list[3]['2015'])
+
+    # Charts
     chart_creator = ExcelAutoChart(df_list, file_name)
-    chart_creator.create_bar_chart(index=0, sheet_name="Fig2", grouping="standard", chart_type="bar", numeric_type="percentage", chart_template="bar")
-    chart_creator.create_table(index=2, sheet_name="Tab1")
-    chart_creator.create_table(index=3, sheet_name="Tab2")
+    chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", chart_type="bar", numeric_type="percentage", chart_template="bar")
+    chart_creator.create_table(index=2, sheet_name="Tab2")
     chart_creator.save_workbook()
 
 
@@ -196,8 +198,6 @@ def bellezas_naturales():
     chart_creator.save_workbook()
 
 
-    
-# TODO: Second bar chart should be transposed, add param
 if __name__ == "__main__":
     #uso_tecnologia_educacion()
     #edificaciones_antisismicas()
