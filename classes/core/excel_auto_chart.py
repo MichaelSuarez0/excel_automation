@@ -29,6 +29,7 @@ class ExcelAutoChart:
         self.writer = ExcelFormatter(df_list, output_name)
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
+        self.sheet_count = 0
         
     # TODO: Add in formats
     # TODO: Here you can define base chart configs for bar charts
@@ -38,7 +39,6 @@ class ExcelAutoChart:
         chart = self.workbook.add_chart({'type': chart_type}) if not chart_subtype else self.workbook.add_chart({'type': chart_type, 'subtype': chart_subtype})
 
         chart.set_title({'name': ''})
-        chart.set_size({'width': 600, 'height': 420})
         chart.set_legend({'position': 'bottom'})
         chart.set_plotarea({
             'layout': {
@@ -52,9 +52,10 @@ class ExcelAutoChart:
 
         return chart
  
+    # TODO: cycle through colors with itertools.cycle
     # TODO: Data labels position
     # TODO: Add axis in formats
-    # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
+    # TODO: Implement manual coloring logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
         self,
         index: int = 0,
@@ -90,24 +91,20 @@ class ExcelAutoChart:
         ValueError
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
-        # Definir el formato numérico según 'numeric_type'
-        num_format: str = self.format.numeric_types[numeric_type]
+        # Initialize configurations
+        configs = self.format.charts[chart_template]
+        colors = configs['colors']
+        num_format = self.format.numeric_types[numeric_type]
+        
+        # Writing to sheet
         data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
 
         # Check if the DataFrame is empty
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
         
+        # Load predefined formats
         chart = self._create_base_chart('line')
-
-        configs = self.format.charts[chart_template]
-
-        if len(data_df.columns) < 5:
-            colors = self.format.charts["line_simple"].get("colors", {})
-        else:
-            colors = self.format.charts["line"].get("colors", {})
-        
-        colors = configs["colors"]
 
         # Base chart configurations
         chart.set_title(configs["title"])
@@ -142,7 +139,7 @@ class ExcelAutoChart:
                         'color': colors[(idx) % len(colors)],
                         },
                 'data_labels': {
-                    'value': True if chart_template in ("line", "line_simple") else False,
+                    'value': True if chart_template == "line_simple" else False,
                     'position': 'above' if idx == 1 else 'below',
                     'num_format': num_format,
                     'font':{
@@ -171,22 +168,134 @@ class ExcelAutoChart:
         worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
         
         #self.writer.close()  # Automatically saves
-        print(f"✅ Gráfico de líneas agregado a la hoja {index + 1}")
+        print(f"✅ Gráfico de líneas agregado a la hoja {self.sheet_count + 1}")
+        self.sheet_count += 1
         return worksheet
     
-    # TODO: Verificar si  col_idx = idx + 1  causa problemas
-    # TODO: Ordenar por secciones
+    
+    def create_column_chart(
+            self,
+            index: int,
+            sheet_name: str,
+            grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
+            numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
+            chart_template: Literal['column', 'column_simple'] = "column",
+            axis_title: str = ""
+        ) -> Worksheet:
+            """Generate a column chart in Excel from data in a DataFrame list.
+
+            Parameters
+            ----------
+            index : int, optional
+                Index of the DataFrame in df_list to use (default is 0).
+            sheet_name : str, optional
+                Assign a name to the new worksheet.
+            grouping : str, optional
+                Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
+            numeric_type : str, optional
+                Defines the number format for the series. Options are:
+                'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
+            chart_template : str, optional
+                Template for the chart configuration: 'column', 'column_simple', 'bar', or 'bar_single' (default is "column").
+            axis_title : str, optional
+                Title for the axis (default is an empty string).
+
+            Returns
+            -------
+            Worksheet
+                The worksheet with the inserted column chart.
+
+            Raises
+            ------
+            ValueError
+                If the DataFrame is empty or if an invalid chart_template is provided.
+            """
+            # Initialize configurations
+            configs = self.format.charts[chart_template]
+            colors = configs['colors']
+            num_format = self.format.numeric_types[numeric_type]
+
+            # Writing to sheet
+            data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
+            
+            # Raising errors
+            if data_df.empty:
+                raise ValueError("DataFrame is empty. No data to plot.")
+            if chart_template not in {"column", "column_simple"}:
+                raise ValueError(f"Invalid chart_template for columns: {chart_template}. Expected one of 'column' or 'column_simple'")
+
+            # Map grouping types to xlsxwriter subtypes
+            subtype_map = {
+                'standard': 'clustered',
+                'stacked': 'stacked',
+                'percentStacked': 'percent_stacked'
+            }
+            subtype = subtype_map.get(grouping, 'clustered')
+
+            # Predefined formats
+            chart = self._create_base_chart('column', subtype)
+
+            # Base chart configurations
+            chart.set_title(configs["title"])
+            chart.set_size(configs["size"])
+            chart.set_legend(configs["legend"])
+            chart.set_plotarea(configs["plotarea"])
+            chart.set_chartarea(configs["chartarea"])
+
+            # Add data series with color scheme
+            for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
+                col_idx = idx + 1  
+                value_data = (data_df[col] != 0).all()
+                
+                series_params = {
+                    **configs['series'],
+                    'name': [sheet_name, 0, col_idx],
+                    'values': [sheet_name, 1, col_idx, len(data_df), col_idx],  
+                    'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
+                    'fill': {'color': colors[(col_idx-1) % len(colors)]},
+                    'data_labels': {
+                        **configs['series']['data_labels'],
+                        'num_format': num_format,
+                        'value': value_data,
+                        'font': {
+                            **configs['series']['data_labels']['font'],
+                            'color': Color.WHITE.value if grouping == "stacked" else Color.BLACK.value}
+                        },
+                }
+                chart.add_series(series_params)
+
+            # Configure axes
+            chart.set_y_axis({
+                **self.format.charts["y_axis"],
+                'name': axis_title,
+                'num_format': '0%' if num_format=='0.0%' else num_format,
+                'min': 0,
+            })
+            chart.set_x_axis({
+                **self.format.charts["x_axis"],
+                'num_format': '@',
+            })
+
+            # Insert chart with proper positioning
+            position = 'E3' if len(data_df.columns[1:]) < 4 else 'J3'
+            worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
+            
+            print(f"✅ Gráfico de columnas agregado a la hoja {self.sheet_count + 1}")
+            self.sheet_count += 1
+            return worksheet 
+    
+    # TODO: Implement manual coloring logic for specific series (i.e. Peru series) if column.name == Peru
+    # TODO: Add axes in formats
     def create_bar_chart(
         self,
-        index: int = 0,
-        sheet_name: str = "FigX",
+        index: int,
+        sheet_name: str = "",
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
-        chart_type: Literal['bar', 'column'] = 'column',
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        chart_template: Literal['column', 'column_simple', 'bar', 'bar_single'] = "column",
+        chart_template: Literal['bar', 'bar_single'] = "bar",
         axis_title: str = ""
     ) -> Worksheet:
-        """Generate a bar or column chart in Excel from data in a DataFrame list.
+        """Generate a bar chart in Excel from data in a DataFrame list.
 
         Parameters
         ----------
@@ -196,32 +305,37 @@ class ExcelAutoChart:
             Name of the worksheet (default is "FigX").
         grouping : str, optional
             Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
-        chart_type : str, optional
-            Type of chart to create: "column" for vertical or "bar" for horizontal (default is "column").
         numeric_type : str, optional
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
         chart_template : str, optional
-            Template for the chart configuration: 'column', 'column_simple', 'bar', or 'bar_single' (default is "column").
+            Template for the chart configuration: 'bar', or 'bar_single' (default is "bar").
         axis_title : str, optional
             Title for the axis (default is an empty string).
 
         Returns
         -------
         Worksheet
-            The worksheet with the inserted chart.
+            The worksheet with the inserted bar chart.
 
         Raises
         ------
         ValueError
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
+        # Initialize configurations
+        configs = self.format.charts[chart_template]
+        colors = configs['colors']
         num_format = self.format.numeric_types[numeric_type]
+
+        # Writing to sheet
         data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
         
-        # Check if DataFrame is empty
+        # Raising errors
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
+        if chart_template not in {"bar", "bar_single"}:
+            raise ValueError(f"Invalid chart_template for bar chart: {chart_template}. Expected one of 'bar' or 'bar_single'")
 
         # Map grouping types to xlsxwriter subtypes
         subtype_map = {
@@ -231,14 +345,9 @@ class ExcelAutoChart:
         }
         subtype = subtype_map.get(grouping, 'clustered')
 
-        configs = self.format.charts[chart_template]
 
-        # Validate chart type
-        if chart_type not in {"column", "bar"}:
-            raise ValueError("Invalid chart_type. Use 'column' (vertical) or 'bar' (horizontal).")
-        
         # Predefined formats
-        chart = self._create_base_chart(chart_type, subtype)
+        chart = self._create_base_chart('bar', subtype)
 
         # Base chart configurations
         chart.set_title(configs["title"])
@@ -246,8 +355,6 @@ class ExcelAutoChart:
         chart.set_legend(configs["legend"])
         chart.set_plotarea(configs["plotarea"])
         chart.set_chartarea(configs["chartarea"])
-
-        colors = configs['colors']
 
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
@@ -264,62 +371,36 @@ class ExcelAutoChart:
             }
             chart.add_series(series_params)
 
-        # elif chart_type == "bar":
-        #     for row_idx in range(1, len(data_df) + 1):  
-
-        #         series_params = {
-        #             **configs['series'],
-        #             'name': [sheet_name, row_idx, 0],  
-        #             'categories': [sheet_name, 0, 1, 0, data_df.shape[1] - 1],  # Categorías en la primera fila
-        #             'fill': {'color': colors[(row_idx-1) % len(colors)]},
-        #             'values': [sheet_name, row_idx, 1, row_idx, data_df.shape[1] - 1], 
-        #             'data_labels': {**configs['series']['data_labels'], 'num_format': num_format},
-        #         }
-        #         chart.add_series(series_params)
-            
-        # TODO: Move to initialize
+        
         # Configure axes
-        if chart_type == "column":
-            chart.set_y_axis({
-                **self.format.charts["y_axis"],
-                'name': axis_title,
-                'num_format': '0%' if num_format=='0.0%' else num_format,
-                'min': 0,
+        chart.set_legend(configs['legend'])
+        chart.set_x_axis({
+            'name': axis_title,
+            'visible': False,
+            'line': {'none': True},
+            'major_tick_mark': 'none',
+            'major_gridlines': {'visible': False}
+        })
+        chart.set_y_axis({
+            **self.format.charts["x_axis"], # Inverted
+            'num_format': '@',
+            'reverse': True
             })
-            chart.set_x_axis({
-                **self.format.charts["x_axis"],
-                'num_format': '@',
-                })
-
-        # TODO: Add in formats
-        elif chart_type in ("bar", "bar_single"):
-            chart.set_legend(configs['legend'])
-            chart.set_x_axis({
-                'name': axis_title,
-                'visible': False,
-                'line': {'none': True},
-                'major_tick_mark': 'none',
-                'major_gridlines': {'visible': False}
-            })
-            chart.set_y_axis({
-                **self.format.charts["x_axis"], # Inverted
-                'num_format': '@',
-                'reverse': True
-                })
 
         # Insert chart with proper positioning
         position = 'E3' if len(data_df.columns[1:]) < 4 else 'J3'
         worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
         
-        #self.writer.close()  # Save and close workbook
-        print(f"✅ Gráfico de barras agregado a la hoja {index + 1}")
-        return worksheet
+        print(f"✅ Gráfico de barras agregado a la hoja {self.sheet_count + 1}")
+        self.sheet_count += 1
+        return worksheet 
+
     
     def create_table(
         self,
-        index: int = 0,
-        sheet_name: str = "TabX",
-        chart_template: Literal["index", "data_table", "text_table"] = "text_table",
+        index: int,
+        sheet_name: str,
+        chart_template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
     ) -> Worksheet:
         """
@@ -329,10 +410,10 @@ class ExcelAutoChart:
         Parameters
         ----------
         index : int, optional
-            The index of the DataFrame in `df_list` to use (default is 0).
+            The index of the DataFrame in `df_list` to use.
         sheet_name : str, optional
-            The name of the worksheet where the table will be inserted (default is "TabX").
-        chart_template : {'index', 'data_table', 'text_table'}, optional
+            The name of the worksheet where the table will be inserted.
+        chart_template : {'database', 'index', 'data_table', 'text_table'}, optional
             The type of chart template to apply to the table (default is 'text_table').
         numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
             The numeric format for the values in the table (default is 'decimal_1').
@@ -364,7 +445,8 @@ class ExcelAutoChart:
         # Hide gridlines
         worksheet.hide_gridlines(2)
 
-        print(f"✅ Tabla agregada en la hoja {index + 1}")
+        print(f"✅ Tabla agregada en la hoja {self.sheet_count + 1}")
+        self.sheet_count += 1
         return worksheet
 
     def save_workbook(self, output_name: str = "Excel_chart"):
