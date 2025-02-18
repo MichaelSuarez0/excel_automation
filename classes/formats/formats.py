@@ -72,6 +72,7 @@ class CellFormats:
                     **white_borders,
                     'bg_color': Color.GRAY_LIGHT.value,
                     'text_wrap': True,
+                    'valign': 'vcenter',
                     'font_size': 10
                 },
                 'data': {
@@ -95,6 +96,8 @@ class CellFormats:
                 'first_column': {
                     **white_borders,
                     'bg_color': Color.GRAY_LIGHT.value,
+                    'valign': 'vcenter',
+                    'align': 'justify',
                     'text_wrap': True,
                     'font_size': 10
                 },
@@ -102,7 +105,7 @@ class CellFormats:
                     'border': 1,
                     'border_color': Color.GRAY_LIGHT.value,
                     'align': 'justify',
-                    'valign': 'center',
+                    'valign': 'vcenter',
                     'font_size': 10
                 }
             },
@@ -237,7 +240,8 @@ class ChartFormats:
                     'marker': {
                         'type': 'circle',
                         'size': 6
-                    }    
+                    },
+                    'data_labels': {'value': False}
                 }
             },
             'line_simple': {
@@ -330,9 +334,9 @@ class ChartFormats:
                 'plotarea': {
                     'layout':{
                         'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
-                        'height': 0.75
+                        'y':      0.06,
+                        'width':  0.85,
+                        'height': 0.78
                         }
                 },                
                 'series':{

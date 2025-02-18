@@ -88,13 +88,12 @@ class ExcelDataExtractor():
         dfs_dict = pd.read_excel(self.file_path, sheet_name=None) 
         sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
         dfs = [dfs_dict[name] for name in sheet_names]
-        dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
-        # Limpia las cadenas de todas las columnas de tipo 'object' de una vez
-        # Quitar espacios sobrantes de las columnas de tipo strin
+        #dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
+        # Quitar espacios sobrantes de las columnas de tipo string
         for df in dfs:
             object_columns = df.select_dtypes(include=['object']).columns
             for col in object_columns:
-                df[col] = df[col].str.strip()
+                df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
         return dfs
     
     # Transformation methods
@@ -137,6 +136,7 @@ class ExcelDataExtractor():
         
         return normalized_dfs
     
+    # TODO: Raise KeyError if selected category is not found
     def filter_data(
         self,
         df: pd.DataFrame,
@@ -214,7 +214,8 @@ class ExcelDataExtractor():
         df2_name: str,
     )-> pd.DataFrame:
         """Concatenates two DataFrames and adds a row for the 'Tipo' at the start of the DataFrame."""
-
+        # Guardar orden original
+        column_order = df1.iloc[:, 0].tolist()
         df1 = pd.concat([df1, pd.DataFrame([['Tipo'] + [df1_name] * (len(df1.columns)-1)], columns=df1.columns)]).reset_index(drop=True)
         df2 = pd.concat([df2, pd.DataFrame([['Tipo'] + [df2_name] * (len(df2.columns)-1)], columns=df2.columns)]).reset_index(drop=True)
         first_col_df1 = df1.columns[0]
@@ -225,13 +226,15 @@ class ExcelDataExtractor():
             raise KeyError(f"The first columns do not match: '{first_col_df1}' and '{first_col_df2}'")
         result_df = pd.merge(df1, df2, on=first_col_df1, how='outer', suffixes=('_1', '_2'))
 
-        # Mover la fila "Tipo" al principio
-        result_df = pd.concat([result_df.iloc[[-1],:], result_df.drop(result_df.index[-1], axis=0)], axis=0)
+        # Convertir la fila Tipo en los nombres de las columnas
+        tipo_row = result_df[result_df.iloc[ :,0] == 'Tipo'].iloc[0]
+        nombre_original = result_df.columns[0]
+        result_df.columns = tipo_row
+        result_df.columns.values[0] = nombre_original
 
-        # Convertir la primera fila (Tipo) en los nombres de las columnas
-        tipo_row = result_df[result_df.iloc[:, 0] == 'Tipo'].iloc[0]  # Encontrar la fila 'Tipo'
-        result_df.columns = tipo_row 
-
+        # Preservar orden original
+        result_df = result_df.set_index(result_df.columns[0]).reindex(column_order).reset_index()
+        
         # Eliminar la fila "Tipo"
         result_df = result_df[result_df.iloc[:, 0] != 'Tipo'].reset_index(drop=True)
 
@@ -289,7 +292,10 @@ class ExcelDataExtractor():
                 pd.DataFrame([['Tipo'] + [name] * (len(df.columns)-1)], columns=df.columns)
             ]).reset_index(drop=True)
             processed_dfs.append(processed_df)
-        
+
+        # Guardar orden original
+        column_order = processed_dfs[0].iloc[:, 0].tolist()
+
         # Realizar el merge de todos los DataFrames
         result_df = processed_dfs[0]
         for df in processed_dfs[1:]:
@@ -300,17 +306,16 @@ class ExcelDataExtractor():
                 how='outer',
                 suffixes=('_left', '_right')
             )
-        
-        # Mover la fila "Tipo" al principio
-        result_df = pd.concat([
-            result_df[result_df.iloc[:, 0] == 'Tipo'],
-            result_df[result_df.iloc[:, 0] != 'Tipo']
-        ]).reset_index(drop=True)
-        
-        # Convertir la primera fila (Tipo) en los nombres de las columnas
-        tipo_row = result_df.iloc[0]
+
+        # Convertir la fila Tipo en los nombres de las columnas
+        tipo_row = result_df[result_df.iloc[ :,0] == 'Tipo'].iloc[0]
+        nombre_original = result_df.columns[0]
         result_df.columns = tipo_row
-        
+        result_df.columns.values[0] = nombre_original
+
+        # Preservar orden original
+        result_df = result_df.set_index(result_df.columns[0]).reindex(column_order).reset_index()
+
         # Eliminar la fila "Tipo"
         result_df = result_df[result_df.iloc[:, 0] != 'Tipo'].reset_index(drop=True)
         

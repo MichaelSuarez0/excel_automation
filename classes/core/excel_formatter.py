@@ -69,7 +69,7 @@ class ExcelFormatter:
         for row_idx in range(df.shape[0]):
             cell_value = df.iloc[row_idx, 0]
             # First column (e.g., dates or text)
-            if cell_value.__contains__("/") or cell_value.__contains__("-"):
+            if isinstance(cell_value, str) and ("/" in cell_value or "-" in cell_value):
                 try: 
                     date_value = pd.to_datetime(cell_value)
                     excel_date = (date_value - pd.Timestamp("1899-12-30")).days
@@ -105,7 +105,7 @@ class ExcelFormatter:
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
-        fmt = self.format.cells['database']
+        fmt = self.format.cells['text_table']
 
         ### Writing
         # Write headers with header format
@@ -113,9 +113,9 @@ class ExcelFormatter:
             worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt['header']))
 
         # Modify base formats
-        gray_format = {**fmt['first_column'], 'valign': 'vcenter'}
+        gray_format = {**fmt['first_column']}
         gray_bold_format = {**gray_format, 'bold': True}
-        white_format = {**fmt['data'], 'text_wrap': True, 'valign': 'vcenter', 'right': 0}
+        white_format = {**fmt['data'], 'right': 0}
         white_bold_format = {**white_format, 'bold': True}
         
         # Write table contents with alternating colors and bold for first column
@@ -145,7 +145,7 @@ class ExcelFormatter:
 
         # Rest of columns widths
         for col_idx in range(1, df.shape[1]):
-            worksheet.set_column(col_idx, col_idx, 5.5)
+            worksheet.set_column(col_idx, col_idx, 5.15)
 
         # Row heights
         for row_idx in range(df.shape[0]+1):
