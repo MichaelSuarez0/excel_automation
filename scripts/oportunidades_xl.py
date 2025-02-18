@@ -154,9 +154,44 @@ def edificaciones_antisismicas_xl():
         chart_creator.save_workbook()
 
 
+<<<<<<< Updated upstream
+=======
+
+def uso_tecnologia_educacion_xl():
+    # Variables
+    # Falta Lima Metropolitana
+    departamentos = ["Lima", "Apurimac", "Moquegua", "Tacna", "Ancash", "Arequipa", "La Libertad", "Ica", "Tumbes", "Callao"]
+    file_name_base = "o9_{} - Uso de la tecnologia e innovación"
+
+    # ETL
+    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación")
+    dfs = excel.worksheets_to_dataframes(False)
+    dfs = excel.normalize_orientation(dfs)
+
+    for dpto in departamentos:
+        df_list = dfs.copy()
+        file_name = file_name_base.format(dpto[:3].lower())
+        df_list[2] = excel.filter_data(df_list[2], dpto)
+        df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/100_000_000
+
+         # Charts
+        chart_creator = ExcelAutoChart(df_list, file_name)
+        chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line", axis_title="Porcentaje (%)")
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="bar_single")
+        chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_simple", axis_title="Cientos de millones de soles")
+        chart_creator.create_table(index=3, sheet_name="Tab1")
+        chart_creator.save_workbook()
+
+
+>>>>>>> Stashed changes
 if __name__ == "__main__":
     #brecha_digital_xl()
     #infraestructura_vial_xl()
     #reforzamiento_programas_sociales_xl()
+<<<<<<< Updated upstream
     edificaciones_antisismicas_xl()
+=======
+    #edificaciones_antisismicas_xl()
+    uso_tecnologia_educacion_xl()
+>>>>>>> Stashed changes
     
