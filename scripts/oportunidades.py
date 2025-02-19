@@ -31,42 +31,10 @@ def brecha_digital():
     #chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
-# TODO: Modularize
-def brecha_digital_xl():
-    # Variables
-    regiones = ["Costa", "Sierra", "Selva"]
-    dptos = ["Áncash", "Madre de Dios", "Puno", "Huánuco", "Amazonas", "Cajamarca", "Lambayeque", "Huánuco", "San Martín", "Ucayali"]
-    file_name_base = "o8_{} - Cierre de la brecha digital"
 
-    # ETL
-    excel = ExcelDataExtractor("Oportunidad - Brecha digital")
-    dfs = excel.worksheets_to_dataframes()
-    dfs = excel.normalize_orientation(dfs=dfs)
-    dfs[3] = excel.filter_data(dfs[3], regiones)
-
-    for dpto in dptos:
-        df_list = dfs.copy()
-        dpto_seleccion = ["Total", dpto]
-        file_name = file_name_base.format(dpto[:3].lower())
-        df_list[2] = excel.filter_data(dfs[2], dpto_seleccion)
-        #excel.dataframe_to_worksheet(df_list[0], "Fig1")
-        #ic(df_list[2])
-
-        # Charts
-        chart_creator = ExcelAutoChart(df_list, file_name)
-        chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="bar")
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping= "stacked", chart_type="column")
-        chart_creator.create_line_chart(index=2, sheet_name="Fig3")
-        chart_creator.create_line_chart(index=3, sheet_name="Fig4")
-        #chart_creator.create_table(index=3, sheet_name="Tab1")
-        chart_creator.save_workbook()
-
-
-
-# TODO: Manejar merge
 def edificaciones_antisismicas():
     # Variables
-    departamentos = ["Lima", "Tipo"]
+    departamentos = ["Lima"]
     final_file_name = "o5_lim - Mayor construcción de edificaciones antisísmicas"
 
     # ETL
@@ -75,15 +43,14 @@ def edificaciones_antisismicas():
     df_list = excel.normalize_orientation(dfs=df_list)
     df_list[0] = excel.filter_data(df_list[0], departamentos)
     df_list[1] = excel.filter_data(df_list[1], departamentos)
-    df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores", "Temblores mayores")
+    df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores a 4,9 grados", "Temblores mayores a 4,9 grados")
     df_list[0] = df_list[0].replace("-", 0)
-    ic(df_list[0])
 
     #Charts
-    # chart_creator = ExcelAutoChart(df_list, final_file_name)
-    # chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="column", grouping="stacked")
-    # chart_creator.create_table(index=2, sheet_name="Tab1")
-    # chart_creator.save_workbook()
+    chart_creator = ExcelAutoChart(df_list, final_file_name)
+    chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", chart_template="column_simple", axis_title="Unidades")
+    chart_creator.create_table(index=2, sheet_name="Tab1")
+    chart_creator.save_workbook()
 
 
 def uso_tecnologia_educacion():
@@ -140,19 +107,26 @@ def infraestructura_vial():
     years = list(range(2014, 2025)) # No incluye 2025
     years = list(map(lambda x: str(x), years))
     categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
-    source_name= "Oportunidad - Infraestructura vial y ferroviara"
+    source_name= "Oportunidad - Infraestructura vial y ferroviaria"
     file_name = "o1_lim Mejoramiento de la infraestructura vial y ferroviaria"
 
-    # ETL
+    ### ETL
     excel = ExcelDataExtractor(source_name)
     df_list = excel.worksheets_to_dataframes(False)
+    #ic(df_list[6])
 
-    for id, df in enumerate(df_list[3:], start=3):
+    ## Tab 1
+    for id, df in enumerate(df_list[4:], start=4):
         df = excel.filter_data(df, categorias2)
         df = excel.normalize_orientation(df)
         df = excel.filter_data(df, departamentos)
         df_list[id] = df
-    df_list[3] = excel.concat_multiple_dataframes(df_list[3:], df_names=years)
+    df_list[4] = excel.concat_multiple_dataframes(df_list[4:], df_names=years)
+
+    # Calcular variación en la construcción de filas
+    df_list[4]['Var %'] = ((df_list[4]['2024'] - df_list[4]['2015']) / df_list[4]['2015'])
+
+    ## Fig 1
     df_list[0] = excel.normalize_orientation(df_list[0])
     df_list[1] = excel.normalize_orientation(df_list[1])
     df_list[0] = excel.filter_data(df_list[0], departamentos)
@@ -167,14 +141,18 @@ def infraestructura_vial():
     df_list[0] = excel.filter_data(df_list[0], categorias)
     df_list[0] = excel.normalize_orientation(dfs=df_list[0])
 
-    # Calcular variación en la construcción de filas
-    df_list[3]['Var %'] = ((df_list[3]['2024'] - df_list[3]['2015']) / df_list[3]['2015'])
+    ## Fig 2
+    df_list[2] = df_list[2].groupby("DEPARTAMENTO", as_index= False)["LONGITUD"].sum()
+    df_list[2].columns = ["Departamento", "Longitud (km)"]
+    df_list[2] = df_list[2].sort_values(by = "Longitud (km)", ascending= True)
 
-    # Charts
+
+    ### Charts
     chart_creator = ExcelAutoChart(df_list, file_name)
-    chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
-    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", chart_type="bar", numeric_type="percentage", chart_template="bar")
-    chart_creator.create_table(index=2, sheet_name="Tab2")
+    chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", numeric_type="percentage", chart_template="bar")
+    chart_creator.create_bar_chart(index=2, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", chart_template="bar_single", highlighted_category=departamentos[0])
+    chart_creator.create_table(index=3, sheet_name="Tab2")
     chart_creator.save_workbook()
 
 
@@ -190,7 +168,7 @@ def bellezas_naturales():
 
     # Charts
     chart_creator = ExcelAutoChart(df_list, final_file_name)
-    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", chart_type="bar", numeric_type="integer")
+    chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", numeric_type="integer")
     chart_creator.create_table(index=1, sheet_name="Tab1")
     chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly")
     chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly")
@@ -202,7 +180,6 @@ if __name__ == "__main__":
     #uso_tecnologia_educacion()
     #edificaciones_antisismicas()
     #brecha_digital()
-    #brecha_digital_xl()
     #reforzamiento_programas_sociales()
     infraestructura_vial()
     #bellezas_naturales()

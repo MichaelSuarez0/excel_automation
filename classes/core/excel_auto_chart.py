@@ -1,4 +1,5 @@
 import os
+from matplotlib import category
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
@@ -55,7 +56,7 @@ class ExcelAutoChart:
     # TODO: cycle through colors with itertools.cycle
     # TODO: Data labels position
     # TODO: Add axis in formats
-    # TODO: Implement manual coloring logic for specific series (i.e. Peru series) if column.name == Peru
+    # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
     def create_line_chart(
         self,
         index: int = 0,
@@ -284,7 +285,6 @@ class ExcelAutoChart:
             self.sheet_count += 1
             return worksheet 
     
-    # TODO: Implement manual coloring logic for specific series (i.e. Peru series) if column.name == Peru
     # TODO: Add axes in formats
     def create_bar_chart(
         self,
@@ -292,6 +292,7 @@ class ExcelAutoChart:
         sheet_name: str = "",
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
+        highlighted_category: str = "",
         chart_template: Literal['bar', 'bar_single'] = "bar",
         axis_title: str = ""
     ) -> Worksheet:
@@ -358,9 +359,20 @@ class ExcelAutoChart:
 
         # Add data series with color scheme
         for idx, col in enumerate(data_df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
+            highlight = False
             col_idx = idx + 1  
             value_data = (data_df[col] != 0).all()
-            
+
+            points = []
+            if highlighted_category is not None:
+                for row_idx in range(data_df.shape[0]):
+                    category_value = data_df.iloc[row_idx, 0]
+                    ic(category_value)
+                    if category_value == highlighted_category:
+                        points.append({'fill': {'color': Color.RED.value}})
+                    else:
+                        points.append({'fill': {'color': colors[(col_idx-1) % len(colors)]}})
+                    
             series_params = {
                 **configs['series'],
                 'name': [sheet_name, 0, col_idx],
@@ -368,6 +380,7 @@ class ExcelAutoChart:
                 'categories': [sheet_name, 1, 0, len(data_df), 0],  # Categorías en la primera columna 
                 'fill': {'color': colors[(col_idx-1) % len(colors)]},
                 'data_labels': {**configs['series']['data_labels'], 'num_format': num_format, 'value': value_data},
+                'points': points
             }
             chart.add_series(series_params)
 
