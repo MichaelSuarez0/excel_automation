@@ -72,7 +72,6 @@ class CellFormats:
                     **white_borders,
                     'bg_color': Color.GRAY_LIGHT.value,
                     'text_wrap': True,
-                    'valign': 'vcenter',
                     'font_size': 10
                 },
                 'data': {
@@ -106,6 +105,7 @@ class CellFormats:
                     'border_color': Color.GRAY_LIGHT.value,
                     'align': 'justify',
                     'valign': 'vcenter',
+                    'text_wrap': True,
                     'font_size': 10
                 }
             },
@@ -162,25 +162,8 @@ class CellFormats:
 # TODO: Test with column widths
 # TODO: Add param for legend and adjust height if not legend
 class ChartFormats:
-
-    @cached_property
-    def charts(self) -> dict[
-        Literal[
-            'line', 
-            'line_simple',
-            'line_monthly,' 
-            'column', 
-            'column_simple', 
-            'bar',  
-            'bar_single', 
-            'y_axis', 
-            'x_axis'
-        ], Any]:
-        """
-        Carga y almacena formatos para gráficos usando lazy loading.
-        Los formatos se definen solo cuando se accede a 'charts' por primera vez.
-        """
-        line_colors = [
+    def __init__(self):
+        self._line_colors = [
             Color.BLUE_DARK.value, 
             Color.RED.value, 
             Color.ORANGE.value, 
@@ -188,12 +171,12 @@ class ChartFormats:
             Color.PURPLE.value, 
             Color.GRAY.value
         ]
-        line_simple_colors = [
+        self._line_simple_colors = [
             Color.RED.value, 
             Color.BLUE_DARK.value,
             Color.BLUE.value, 
         ]
-        column_colors = [
+        self._column_colors = [
             Color.BLUE_DARK.value, 
             Color.BLUE.value, 
             Color.GREEN_DARK.value, 
@@ -202,222 +185,248 @@ class ChartFormats:
             Color.YELLOW.value, 
             Color.GRAY.value
         ]
-        column_simple_colors = [
+        self._column_simple_colors = [
             Color.BLUE_DARK.value, 
             Color.RED.value, 
             Color.GRAY.value
         ]
-        bar_colors = [
+        self._bar_colors = [
             Color.RED.value, 
             Color.BLUE_DARK.value, 
             Color.YELLOW.value
         ]
 
+    @cached_property
+    def charts(self) -> dict[Literal['basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'bar', 'bar_single'], Any]:
+        """
+        Accede a los formatos para gráficos en un solo diccionario.
+        """
         return {
-            'line': {
-                'title': {'name': ''},
-                'size': {'width': 600, 'height': 420},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': line_colors,
-                'dash_type': [
-                            'solid', 'round_dot', 'round_dot', 'round_dot',
-                            'round_dot', 'round_dot', 'round_dot', 'round_dot'
-                        ],
-                'plotarea': {
-                    'layout':{
-                        'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
-                        'height': 0.75
-                        }
-                },
-                'series': {
-                    'smooth': True,
-                    'line': {
-                        'width': 1.75
-                        },
-                    'marker': {
-                        'type': 'circle',
-                        'size': 6
-                    },
-                    'data_labels': {'value': False}
-                }
-            },
-            'line_simple': {
-                'title': {'name': ''},
-                'size': {'width': 580, 'height': 420},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': line_simple_colors,
-                'dash_type': ['round_dot', 'square_dot', 'solid'],
-                'plotarea': {
-                    'layout':{
-                        'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
-                        'height': 0.75
-                        }
-                },    
-                'series': {
-                    'smooth': True,
-                    'line': {
-                        'width': 1.75
-                    },
-                    'marker': {
-                        'type': 'circle',
-                        'size': 6
-                    }
-                }
-            },
-            'line_monthly': {
-                'title': {'name': ''},
-                'size': {'width': 580, 'height': 360},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': line_simple_colors,
-                'dash_type': [
-                            'square_dot', 'square_dot', 'round_dot'
-                        ],
-                'plotarea': {
-                    'layout':{
-                        'x':      0.11,
-                        'y':      0.06,
-                        'width':  0.85,
-                        'height': 0.75
-                        }
-                },
-                'series': {
-                    'smooth': True,
-                    'line': {
-                        'width': 1.75
-                        },
-                    'marker': {
-                        'none': True
-                    },
-                    'data_labels': {'value': False}
-                }
-            },
-            'column': {
-                'title': {'name': ''},
-                'size': {'width': 580, 'height': 420},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': column_colors,
-                'plotarea': {
-                    'layout':{
-                        'x':      0.11,
-                        'y':      0.08,
-                        'width':  0.83,
-                        'height': 0.75
-                        }
-                },
-                'series': {
-                    'fill': {'colors': column_colors},
-                    'gap': 100,
-                    'data_labels': {
-                        'position': 'outside_end',
-                        'font': {
-                            'bold': True,
-                            'color': Color.BLACK.value,
-                            'size': 10.5
-                        }
-                    }
-                }
-            },
-            'column_simple': {
-                'title': {'name': ''},
-                'size': {'width': 600, 'height': 420},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': column_simple_colors,
-                'plotarea': {
-                    'layout':{
-                        'x':      0.11,
-                        'y':      0.06,
-                        'width':  0.85,
-                        'height': 0.78
-                        }
-                },                
-                'series':{
-                    'gap': 100,
-                    'data_labels': {
-                        'position': 'outside_end',
-                        'font': {
-                            'bold': True,
-                            'color': Color.BLACK.value,
-                            'size': 10.5
-                        }
-                    }
-                }
-            },
-            'bar': {
-                'title': {'name': ''},
-                'size': {'width': 570, 'height': 340},
-                'legend': {'position': 'bottom'},
-                'chartarea': {'border': {'none': True}},
-                'colors': bar_colors,
-                'plotarea': {
-                    'layout':{
-                        'x':      0.01,
-                        'y':      0.03,
-                        'width':  0.80,
-                        'height': 0.89
-                        }
-                },
-                'series':{
-                    'gap': 60,
-                    'data_labels': {
-                        'value': True,
-                        'position': 'outside_end',
-                        'font': {
-                            'bold': True,
-                            'color': Color.BLACK.value,
-                            'size': 10
-                        }
-                    }
-                }
-            },
+            'basic': self._basic(),
+            'line': self._line(),
+            'line_simple': self._line_simple(),
+            'line_single': self._line_single(),
+            'line_monthly': self._line_monthly(),
+            'column': self._column(),
+            'column_simple': self._column_simple(),
+            'bar': self._bar(),
+            'bar_single': self._bar_single(),
+        }
 
-            'bar_single': {
-                'title': {'name': ''},
-                'size': {'width': 570, 'height': 460},
-                'legend': {'none': True},
-                'chartarea': {'border': {'none': True}},
-                'colors': column_simple_colors,
-                'plotarea': {
-                    'layout':{
-                        'x':      0.01,
-                        'y':      0.03,
-                        'width':  0.80,
-                        'height': 0.94
-                        }
-                },
-                'series':{
-                    'gap': 40,
-                    'data_labels': {
-                        'value': True,
-                        'position': 'outside_end',
-                        'font': {
-                            'bold': True,
-                            'color': Color.BLACK.value,
-                            'size': 10
-                        }
-                    }
-                }
-            },
-
-            'y_axis': {
-                'major_gridlines': {
-                    'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+    def _basic(self):
+        return {
+            'title': {'name': ''},
+            'size': {'width': 580, 'height': 300},
+            'legend': {'position': 'bottom'},
+            'chartarea': {'border': {'none': True}},
+            'plotarea': {
+                'layout': {
+                    'x': 0.11,
+                    'y': 0.05,
+                    'width': 0.85,
+                    'height': 0.77
                 }
             },
             'x_axis': {
                 'name': '',
                 'text_axis': True,
                 'minor_tick_mark': 'outside',
-                'major_tick_mark': 'none'
+                'major_tick_mark': 'none',
+            },
+            'y_axis': {
+                'major_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT.value}
+                }
+            }
+        }
+
+    def _line(self):
+        return {
+            'colors': self._line_colors,
+            'dash_type': [
+                'solid', 'round_dot', 'round_dot', 'round_dot',
+                'round_dot', 'round_dot', 'round_dot', 'round_dot'
+            ],
+            'series': {
+                'smooth': True,
+                'line': {'width': 1.75},
+                'marker': {'type': 'circle', 'size': 6}
+            },
+            'x_axis': {
+                'mayor_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT.value}
+                }
+            }
+        }
+
+    def _line_simple(self):
+        return {
+            'colors': self._line_simple_colors,
+            'dash_type': ['round_dot', 'square_dot', 'solid'],
+            'series': {
+                'smooth': True,
+                'line': {'width': 1.75},
+                'marker': {'type': 'circle', 'size': 6}
+            }
+        }
+
+    def _line_single(self):
+        return {
+            'colors': self._line_colors,
+            'legend': {'none': True},
+            'dash_type': ['square_dot', 'solid'],
+            'plotarea': {
+                'layout': {
+                    'x': 0.07,
+                    'y': 0.05,
+                    'width': 0.89,
+                    'height': 0.85
+                }
+            },
+            'series': {
+                'smooth': True,
+                'line': {'width': 2.5},
+                'marker': {'type': 'diamond', 'size': 10}
+            }
+        }
+
+    def _line_monthly(self):
+        return {
+            'colors': self._line_simple_colors,
+            'dash_type': ['square_dot', 'square_dot', 'round_dot'],
+            'series': {
+                'smooth': True,
+                'line': {'width': 1.75},
+                'marker': {'none': True},
+                'data_labels': {'value': False}
+            }
+        }
+
+    def _column(self):
+        return {
+            'colors': self._column_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.10,
+                    'y': 0.08,
+                    'width': 0.83,
+                    'height': 0.75
+                }
+            },
+            'series': {
+                'fill': {'colors': self._column_colors},
+                'gap': 60,
+                'data_labels': {
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10.5
+                    }
+                }
+            }
+        }
+
+    def _column_simple(self):
+        return {
+            'colors': self._column_simple_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.11,
+                    'y': 0.06,
+                    'width': 0.85,
+                    'height': 0.82
+                }
+            },
+            'series': {
+                'gap': 60,
+                'data_labels': {
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10.5
+                    }
+                }
+            },
+            'y_axis': {
+                'visible': False,
+                'reverse': False,
+            },
+            'x_axis': {
+                'major_gridlines': {
+                    'visible': False,
+                    }
+            }
+        }
+
+    def _bar(self):
+        return {
+            'size': {'width': 570, 'height': 310},
+            'colors': self._bar_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.01,
+                    'y': 0.03,
+                    'width': 0.80,
+                    'height': 0.87
+                }
+            },
+            'series': {
+                'gap': 60,
+                'data_labels': {
+                    'value': True,
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10
+                    }
+                }
+            },
+            'x_axis': {
+                'visible': False,
+                'line': {'none': True},
+                'major_tick_mark': 'none',
+                'major_gridlines': {'visible': False}
+            },
+            'y_axis': {
+                'reverse': True,
+            }
+        }
+
+    def _bar_single(self):
+        return {
+            'size': {'width': 570, 'height': 450},
+            'legend': {'none': True},
+            'colors': self._column_simple_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.01,
+                    'y': 0.03,
+                    'width': 0.80,
+                    'height': 0.94
+                }
+            },
+            'series': {
+                'gap': 40,
+                'data_labels': {
+                    'value': True,
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10
+                    }
+                }
+            },
+            'x_axis': {
+                'visible': False,
+                'line': {'none': True},
+                'major_tick_mark': 'none',
+                'major_gridlines': {'visible': False}
             }
         }
 
