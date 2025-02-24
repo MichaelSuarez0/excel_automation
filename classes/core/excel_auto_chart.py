@@ -14,7 +14,7 @@ save_dir = os.path.join(script_dir, "..", "..", "charts")
 
 
 class ExcelAutoChart:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart"):
+    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart", output_folder: str = "otros"):
         """Class to write to Excel files from DataFrames and creating charts. Engine: xlsxwriter
 
         Parameters
@@ -23,10 +23,11 @@ class ExcelAutoChart:
             Data that will be written to Excel
         output_name : str, optional: 
             File name for the output file. Defaults to "ExcelAutoChart".
+        output_folder : str, optional:
+            Folder name inside "products" to save the file in.
         """
         self.df_list = df_list
-        self.output_name = output_name
-        self.writer = ExcelFormatter(df_list, output_name)
+        self.writer = ExcelFormatter(df_list, output_name, output_folder)
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
         self.sheet_count = 0
@@ -111,15 +112,13 @@ class ExcelAutoChart:
             col_letter = chr(66 + idx)  # Get column letter (e.g., B, C, D, ...)
             #print(f"Adding series for column {col}: {col_letter}")  # Debug
 
-            if configs["series"]["marker"].get("none", False):
-                marker_config = {"none": True, "type": "none"}
-            else:
-                marker_config = {
-                    **configs["series"]["marker"], 
-                    'fill': {'color': colors[(idx) % len(colors)]},
-                    'line': {'color': colors[(idx) % len(colors)]},
-                    'type': configs["series"]["marker"].get("type", "circle")  
-                }
+            marker_config = {
+                **configs["series"].get("markers", {}),
+                'fill': {'color': colors[(idx) % len(colors)]},
+                'line': {'color': colors[(idx) % len(colors)]},
+                'type': configs["series"]["marker"].get("type", "circle"),
+                'size': configs["series"]["marker"].get("size", 6)  
+            } if not configs["series"].get("marker", {}).get("none", False) else {"none": True, "type": "none"}
 
             series_params = {
                 **configs["series"],
@@ -132,13 +131,17 @@ class ExcelAutoChart:
                         'color': colors[(idx) % len(colors)],
                         },
                 'data_labels': {
-                    'value': True if chart_template == "line_simple" else False,
-                    'position': 'above' if idx == 1 else 'below',
+                    **configs['series'].get('data_labels', {}),
+                    'value': configs['series']['data_labels'].get('value', True),
+                    'position': configs['series']['data_labels'].get('position', True),
                     'num_format': num_format,
-                    'font':{
-                            'color': colors[(idx) % len(colors)],
-                            }
-                        },
+                    'fill': {'color': Color.WHITE.value if not chart_template == "line_single" else Color.BLUE_LIGHT.value},
+                    'font':{'color': configs['series']['data_labels'].get('font', {}).get('color', colors[(idx) % len(colors)])},
+                    # **({'border': {
+                    #         'width': configs['series']['data_labels']['border'].get('width', 1),  
+                    #         'color': colors[(idx) % len(colors)]
+                    #     }} if 'border' in configs['series'].get('data_labels', {}) else {})  # Solo agrega 'border' si está definido
+                    },
                 'marker': marker_config
             }
 
@@ -174,7 +177,7 @@ class ExcelAutoChart:
         sheet_name: str,
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        chart_template: Literal['column', 'column_simple'] = "column",
+        chart_template: Literal['column', 'column_simple', 'column_stacked'] = "column",
         axis_title: str = ""
     ) -> Worksheet:
         """Generate a column chart in Excel from data in a DataFrame list.
@@ -191,7 +194,7 @@ class ExcelAutoChart:
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
         chart_template : str, optional
-            Template for the chart configuration: 'column', 'column_simple', 'bar', or 'bar_single' (default is "column").
+            Template for the chart configuration: 'column', 'column_simple' or 'column_stacked (default is "column").
         axis_title : str, optional
             Title for the axis (default is an empty string).
 
@@ -253,7 +256,7 @@ class ExcelAutoChart:
                     'value': value_data,
                     'font': {
                         **configs['series']['data_labels']['font'],
-                        'color': Color.WHITE.value if grouping == "stacked" else Color.BLACK.value}
+                        'color': Color.WHITE.value if grouping in ("stacked", "percentStacked") else Color.BLACK.value}
                     },
             }
             chart.add_series(series_params)

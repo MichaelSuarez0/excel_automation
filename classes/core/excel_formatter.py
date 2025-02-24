@@ -7,11 +7,11 @@ from typing import Tuple, Literal
 import numpy as np
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
-save_dir = os.path.join(script_dir, "..", "..", "charts")
+save_dir = os.path.join(script_dir, "..", "..", "products")
 
 
 class ExcelFormatter:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart"):
+    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart", output_folder: str = "otros"):
         """Class to write to Excel files from DataFrames and applying format. Engine: xlsxwriter
 
         Parameters
@@ -20,9 +20,12 @@ class ExcelFormatter:
             Data that will be written to Excel
         output_name : str, optional: 
             File name for the output file. Defaults to "ExcelAutoChart".
+        output_folder : str, optional:
+            Folder name inside "products" to save the file in.
         """
+        output_path = os.path.join(save_dir, output_folder, f'{output_name}.xlsx') ; os.makedirs(os.path.dirname(output_path), exist_ok=True)
         self.output_name = output_name
-        self.writer = pd.ExcelWriter(os.path.join(save_dir, f'{output_name}.xlsx'), engine='xlsxwriter')
+        self.writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
         self.workbook: Workbook = self.writer.book
         self.df_list = df_list
         self.sheet_dfs = {}
@@ -102,6 +105,7 @@ class ExcelFormatter:
         ### Widths and heights
         worksheet.set_column('A:A', 26)
         worksheet.set_column('B:B', 54)
+        worksheet.set_row(0, 20)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
@@ -114,9 +118,9 @@ class ExcelFormatter:
 
         # Modify base formats
         gray_format = {**fmt['first_column']}
-        gray_bold_format = {**gray_format, 'bold': True}
+        gray_bold_format = {**gray_format, 'bold': True, 'align': 'left'}
         white_format = {**fmt['data'], 'right': 0}
-        white_bold_format = {**white_format, 'bold': True}
+        white_bold_format = {**white_format, 'bold': True, 'align': 'left'}
         
         # Write table contents with alternating colors and bold for first column
         for row_idx in range(df.shape[0]):
@@ -131,6 +135,7 @@ class ExcelFormatter:
 
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
     
+    # TODO: Set row heights dinamically
     def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
         """Applies formatting to data tables"""
 
@@ -149,7 +154,7 @@ class ExcelFormatter:
 
         # Row heights
         for row_idx in range(df.shape[0]+1):
-            worksheet.set_row(row_idx, 30)
+            worksheet.set_row(row_idx, 15)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)

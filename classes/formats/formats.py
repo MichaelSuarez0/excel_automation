@@ -176,6 +176,9 @@ class ChartFormats:
             Color.BLUE_DARK.value,
             Color.BLUE.value, 
         ]
+        self._line_single_colors = [
+            Color.BLUE.value, 
+        ]
         self._column_colors = [
             Color.BLUE_DARK.value, 
             Color.BLUE.value, 
@@ -209,6 +212,7 @@ class ChartFormats:
             'line_monthly': self._line_monthly(),
             'column': self._column(),
             'column_simple': self._column_simple(),
+            'column_stacked': self._column_stacked(),
             'bar': self._bar(),
             'bar_single': self._bar_single(),
         }
@@ -251,7 +255,8 @@ class ChartFormats:
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
-                'marker': {'type': 'circle', 'size': 6}
+                'marker': {'type': 'circle', 'size': 6},
+                'data_labels': {'value': False}
             },
             'x_axis': {
                 'mayor_gridlines': {
@@ -268,13 +273,15 @@ class ChartFormats:
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
-                'marker': {'type': 'circle', 'size': 6}
-            }
+                'marker': {'type': 'circle', 'size': 6},
+                'data_labels': {'value': False}
+            },
+            
         }
 
     def _line_single(self):
         return {
-            'colors': self._line_colors,
+            'colors': self._line_single_colors,
             'legend': {'none': True},
             'dash_type': ['square_dot', 'solid'],
             'plotarea': {
@@ -288,7 +295,27 @@ class ChartFormats:
             'series': {
                 'smooth': True,
                 'line': {'width': 2.5},
-                'marker': {'type': 'diamond', 'size': 10}
+                'marker': {'type': 'diamond', 'size': 12},
+                'data_labels': {
+                    'value': True,
+                    'position': 'above',
+                    'fill': {'color': Color.BLUE_LIGHT.value},
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10.5
+                    },
+                    'border': {
+                        'width': 1
+                    }
+                }
+            },
+           'y_axis': {
+                'visible': False,
+                'major_gridlines': {
+                    'visible': False,
+                    'line': {'color': Color.GRAY_LIGHT.value}
+                }
             }
         }
 
@@ -311,7 +338,7 @@ class ChartFormats:
                 'layout': {
                     'x': 0.10,
                     'y': 0.08,
-                    'width': 0.83,
+                    'width': 0.85,
                     'height': 0.75
                 }
             },
@@ -359,6 +386,43 @@ class ChartFormats:
                 'major_gridlines': {
                     'visible': False,
                     }
+            }
+        }
+    
+    def _column_stacked(self):
+        return {
+            'colors': self._column_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.09,
+                    'y': 0.05,
+                    'width': 0.88,
+                    'height': 0.76
+                }
+            },
+            'series': {
+                'fill': {'colors': self._column_colors},
+                'gap': 60,
+                'data_labels': {
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': False,
+                        'color': Color.BLACK.value,
+                        'size': 10
+                    }
+                }
+            },
+            'x_axis': {
+                'mayor_tick_mark': 'none',
+                'major_gridlines': {
+                    'visible': False
+                }
+            },
+            'y_axis': {
+                'minor_tick_mark': 'none',
+                'major_gridlines': {
+                    'visible': False,
+                }
             }
         }
 

@@ -2,14 +2,13 @@ import os
 import pandas as pd
 import openpyxl
 from icecream import ic
-import logging
 import pandas as pd
-from typing import Tuple, Optional
+from typing import Optional
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class ExcelDataExtractor():
-    def __init__(self, file_name: str):
+    def __init__(self, file_name: str, folder: str = "otros"):
         """Class to obtain data from an Excel file, convert to DataFrame, apply transformations, and export it. 
         Engine: mostly pandas
 
@@ -17,9 +16,11 @@ class ExcelDataExtractor():
         ----------
         file_name : str
                 The name of the Excel file to be loaded (from databases folder)
+        folder : str, optional:
+            Folder name inside "databases" where file is located (defaults to "otros")
         """
-        self.file_path = os.path.join(script_dir, "..", "..", "databases", f'{file_name}.xlsx')
-        self.output_path = os.path.join(script_dir, "..", "..", "charts")
+        self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
+        self.output_path = os.path.join(script_dir, "..", "..", "products")
         self.wb = None
         self.ws = None
         self.load_workbook()
@@ -88,7 +89,7 @@ class ExcelDataExtractor():
         dfs_dict = pd.read_excel(self.file_path, sheet_name=None) 
         sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
         dfs = [dfs_dict[name] for name in sheet_names]
-        #dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
+        dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
         # Quitar espacios sobrantes de las columnas de tipo string
         for df in dfs:
             object_columns = df.select_dtypes(include=['object']).columns
@@ -322,7 +323,7 @@ class ExcelDataExtractor():
         return result_df
 
     # Writing methods (simple)
-    def dataframe_to_worksheet(self, df: pd.DataFrame, output_name: str, sheet_name: str = 'Hoja1', mode: str = 'w') -> None:
+    def dataframe_to_worksheet(self, df: pd.DataFrame, output_name: str, sheet_name: str = 'Hoja1', folder: str = "otros") -> None:
         """Writes a DataFrame to a worksheet in the Excel file.
 
         Parameters
@@ -331,11 +332,11 @@ class ExcelDataExtractor():
             The DataFrame to write to the worksheet.
         sheet_name : str, optional
             The name of the worksheet. Defaults to 'Hoja1'.
-        mode : str, optional
-            The mode to open the Excel file ('w' for write, 'a' for append). Defaults to 'w'.
+        folder : str, optional
+            The name of the folder inside "products". Defaults to "otros".
         """
-        output_file_path = os.path.join(self.output_path, f'{output_name}.xlsx')
-        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode=mode) as writer:
+        output_file_path = os.path.join(self.output_path, folder, f'{output_name}.xlsx')
+        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode='w') as writer:
             df.to_excel(writer, sheet_name=sheet_name, index=False)
         
     def dataframes_to_worksheets(
@@ -343,8 +344,8 @@ class ExcelDataExtractor():
         dfs: list[pd.DataFrame],
         output_name: str,
         sheet_names: list[str] = None, 
-        mode: str = 'w', 
-        skip_first: bool = True
+        skip_first: bool = True,
+        folder: str = True
     ) -> None:
         """Writes multiple DataFrames to multiple worksheets in the Excel file.
 
@@ -354,10 +355,10 @@ class ExcelDataExtractor():
             A list of DataFrames to write to the worksheets.
         sheet_names : list[str], optional
             A list of worksheet names. If not provided, default names will be used.
-        mode : str, optional
-            The mode to open the Excel file ('w' for write, 'a' for append). Defaults to 'w'.
         skip_first : bool, optional
             Whether to start writing from Worksheet 2 onward. Defaults to True.
+        folder : str, optional
+            The name of the folder inside "products". Defaults to "otros".
         """
         if sheet_names is None:
             sheet_names = [f'Hoja{i+1}' for i in range(len(dfs))]  # Default sheet names: Hoja1, Hoja2, etc.
@@ -365,9 +366,10 @@ class ExcelDataExtractor():
         if len(dfs) != len(sheet_names):
             raise ValueError("The number of DataFrames must match the number of sheet names.")
 
-        output_file_path = os.path.join(self.output_path, f'{output_name}.xlsx')
+        output_file_path = os.path.join(self.output_path, folder, f'{output_name}.xlsx')
+        os.makedirs(os.path.dirname(output_file_path), exist_ok= True)
 
-        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode=mode) as writer:
+        with pd.ExcelWriter(output_file_path, engine='openpyxl', mode='w') as writer:
             # If skip_first is True, create an empty sheet as the first one
             if skip_first:
                 pd.DataFrame().to_excel(writer, sheet_name='Índice')
