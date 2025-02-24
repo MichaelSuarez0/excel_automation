@@ -59,19 +59,23 @@ def uso_tecnologia_educacion():
     file_name = "o9_lim - Uso de la tecnologia e innovación"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación", "")
+    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación")
     df_list = excel.worksheets_to_dataframes(False)
     df_list = excel.normalize_orientation(dfs=df_list)
     df_list[2] = excel.filter_data(df_list[2], departamentos)
+    df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/1_000_000_000
     #excel.dataframe_to_worksheet(df_list[0], "Fig1")
     #ic(df_list)
 
     # # Charts
     chart_creator = ExcelAutoChart(df_list, file_name)
-    chart_creator.create_line_chart(index=0, sheet_name="Fig1")
-    chart_creator.create_bar_chart(index=1, sheet_name="Fig2", chart_type= "bar")
-    chart_creator.create_bar_chart(index=2, sheet_name="Fig3")
-    chart_creator.create_table(index=3, sheet_name="Tab1")
+    chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line")
+    # chart_creator.create_line_chart(index=0, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_monthly")
+    # chart_creator.create_line_chart(index=0, sheet_name="Fig3", numeric_type="decimal_2", chart_template="line_simple")
+    chart_creator.create_line_chart(index=0, sheet_name="Fig4", numeric_type="decimal_2", chart_template="line_single")
+    # chart_creator.create_column_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="column_simple")
+    # chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_simple")
+    # chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
 
@@ -108,7 +112,7 @@ def infraestructura_vial():
     years = list(map(lambda x: str(x), years))
     categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
     source_name= "Oportunidad - Infraestructura vial y ferroviaria"
-    file_name = "o1_lim Mejoramiento de la infraestructura vial y ferroviaria"
+    file_name = "o1_lim - Mejoramiento de la infraestructura vial y ferroviaria"
 
     ### ETL
     excel = ExcelDataExtractor(source_name)
@@ -176,12 +180,39 @@ def bellezas_naturales():
     chart_creator.save_workbook()
 
 
+# TODO: Verificar por qué Total aparece primero
+def uso_masivo_telecomunicaciones():
+    # Variables
+    departamentos = ["Lima Region", "Total"]
+    años = [2011, 2013, 2015, 2017, 2019, 2021, 2022, 2023]
+    final_file_name = "o7_lim - Uso masivo de las telecomunicaciones e internet"
+
+    # ETL
+    excel = ExcelDataExtractor("Oportunidad - Uso masivo de las telecomunicaciones e internet", "oportunidades")
+    df_list = excel.worksheets_to_dataframes(False)
+    df_list[0:3] = excel.normalize_orientation(df_list[0:3])
+    df_list[2] = excel.filter_data(df_list[2], departamentos)
+    df_list[3] = excel.filter_data(df_list[3], años)
+
+    # Charts
+    chart_creator = ExcelAutoChart(df_list, final_file_name, "oportunidades/uso_masivo_telecomunicaciones")
+    chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_single")
+    chart_creator.create_column_chart(index=1, sheet_name="Fig2", grouping="percentStacked", numeric_type="percentage", chart_template="column_stacked")
+    chart_creator.create_line_chart(index=2, sheet_name="Fig3", numeric_type="decimal_1", chart_template="line_simple")
+    chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="data_table")
+    chart_creator.create_table(index=4, sheet_name="Tab2", chart_template="text_table")
+    
+    chart_creator.save_workbook()
+
+
 if __name__ == "__main__":
+    #bellezas_naturales()
     #uso_tecnologia_educacion()
     #edificaciones_antisismicas()
     #brecha_digital()
     #reforzamiento_programas_sociales()
-    infraestructura_vial()
-    #bellezas_naturales()
+    #infraestructura_vial()
+    uso_masivo_telecomunicaciones()
+
 
 
