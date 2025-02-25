@@ -1,9 +1,14 @@
+import win32com
 import win32com.client as win32
 import re
 import os
 import time
+import logging
 
-
+# Set up basic configuration for logging
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler('app.log'), logging.StreamHandler()])
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class ExcelCompiler:
@@ -12,34 +17,35 @@ class ExcelCompiler:
         self.excel_app.Visible = True
         self.output_name: str = None
         self.output_folder: str = None
-        self.input_path: str = os.path.join(script_dir, "..", "..", "products", "oportunidades")
+        self.reading_path: str = os.path.join(script_dir, "..", "..", "products", "oportunidades")
         self.output_path = os.path.join(script_dir, "..", "..", "products", "otros")
+        self.nwb = None
         if open_new:
             self.nwb = self._open_new_workbook()
 
-    def set_reading_dir(self, folder: str = "databases", subfolder: str = "otros"):
-        self.input_path = os.path.join(script_dir, "..", "..", folder, subfolder)
+    def set_reading_path(self, folder: str = "databases", subfolder: str = "otros"):
+        self.reading_path = os.path.join(script_dir, "..", "..", folder, subfolder)
 
     def set_visibility(self, visible=False):
         self.excel_app.Visible = visible
 
     def read_workbook(self, file_name: str):
-        self.wb = self.excel_app.Workbooks.Open(os.path.join(self.input_path, f'{file_name}.xlsx'))
+        self.wb = self.excel_app.Workbooks.Open(os.path.join(self.reading_path, f'{file_name}.xlsx'))
 
     def _open_new_workbook(self):
         self.nwb = self.excel_app.Workbooks.Add()    
         return self.nwb
 
     @property
-    def file_name(self):
+    def file_name(self) -> str:
         if self.wb:
             print(f'Nombre del archivo: {os.path.splitext(self.wb.Name)[0]}')
             return os.path.splitext(self.wb.Name)[0]
         return None
 
     @property
-    def count_sheets(self):
-        print(f'El archivo tiene {self.wb.Sheets.Count} hojas.')
+    def count_sheets(self) -> int:
+        logging.info(f'El archivo tiene {self.wb.Sheets.Count} hojas.')
         return self.wb.Sheets.Count
 
     # @property
@@ -51,16 +57,50 @@ class ExcelCompiler:
     #     self.excel_app.Quit()
     
     @property
-    def sheet_names(self, lower= False):
+    def sheet_names(self, lower= False) -> list[str]:
         self._sheet_names = []
-        print('Sheet names:')
+        #print('Sheet names:')
         for sheet in self.wb.Sheets:
             name = sheet.Name
             name.lower if lower else name
             self._sheet_names.append(name)
-            print(f'-{name}')
+            #print(f'-{name}')
         return self._sheet_names
 
+    # TODO: Check if there is an easier way without regex
+    def rename_sheets(self):
+        """
+        Rename sheets based on the number in the file name.
+        """
+        regex = r"^[a-zA-Z]{1,2}(\d{1,2})"
+        file_name = self.file_name
+        match = re.match(regex, file_name)
+        renamed_count = 1
+        wb_len = len(self.sheet_names)
+
+        for index, sheet in enumerate(self.wb.Sheets, start=1):
+            if wb_len != index:
+                new_name = f'{int(match.group(1))}.{renamed_count}'
+            else:
+                new_name = f'{int(match.group(1))}.I'
+            sheet.Name = new_name
+            renamed_count += 1
+
+        # Final save
+        self.wb.Save()
+        logging.info("Renaming completed and workbook saved.")
+    
+    # TODO: Aptos Narrow set as default font
+    def copy_sheets(self):
+        if not self.nwb:
+            self._open_new_workbook()
+            assert self.nwb
+        for sheet in self.wb.Sheets:
+            sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copiar hoja al nuevo libro
+
+        logging.info("Sheets copied to new workbook")
+
+    
     # def order_sheets(self, pattern: str, save_dir: str):
     #     if self._sheet_names is None:
     #         _ = self.sheet_names  # Forzar cálculo de nombres de hojas
@@ -105,42 +145,4 @@ class ExcelCompiler:
     #     final_path = os.path.join(save_dir, "Informe_Entregables_VF_prueba_final.xlsx")
     #     self.nwb.SaveAs(final_path)
     #     print(f"Las hojas han sido copiadas y guardadas correctamente en: {final_path}")
-
-    # def rename_sheets(self, save_interval=20):
-    #     """
-    #     Rename sheets containing 'fig' or 'tab' in their names.
-
-    #     save_interval: Save the workbook after renaming this many sheets.
-    #     """
-    #     fig_count = 1
-    #     tab_count = 1
-    #     renamed_count = 0  # Counter for renamed sheets
-
-    #     print("Starting sheet renaming...")
-
-    #     for sheet in self.wb.Sheets:
-    #         original_name = sheet.Name  # Original name of the sheet
-    #         sheet_name = original_name.lower()  # Normalize name to lowercase
-
-    #         if "fig" in sheet_name:
-    #             new_name = f'Fig{fig_count}'
-    #             sheet.Name = new_name
-    #             print(f"Renamed sheet '{original_name}' to '{new_name}'")
-    #             fig_count += 1
-    #         elif "tab" in sheet_name:
-    #             new_name = f'Tab{tab_count}'
-    #             sheet.Name = new_name
-    #             print(f"Renamed sheet '{original_name}' to '{new_name}'")
-    #             tab_count += 1
-
-    #         renamed_count += 1
-
-    #         # Save progress every save_interval sheets
-    #         if renamed_count % save_interval == 0:
-    #             self.wb.Save()
-    #             print(f"Progress saved after renaming {renamed_count} sheets.")
-
-    #     # Final save
-    #     self.wb.Save()
-    #     print("Renaming completed and workbook saved.")
 
