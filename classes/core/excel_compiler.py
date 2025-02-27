@@ -5,6 +5,7 @@ import os
 import time
 import logging
 
+
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
@@ -12,9 +13,9 @@ logging.basicConfig(level=logging.INFO,
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class ExcelCompiler:
-    def __init__(self, open_new = True):
+    def __init__(self, open_new = True, visible= True):
         self.excel_app = win32.Dispatch('Excel.Application')
-        self.excel_app.Visible = True
+        self.excel_app.Visible = visible
         self.output_name: str = None
         self.output_folder: str = None
         self.reading_path: str = os.path.join(script_dir, "..", "..", "products", "oportunidades")
@@ -68,11 +69,12 @@ class ExcelCompiler:
         return self._sheet_names
 
     # TODO: Check if there is an easier way without regex
-    def rename_sheets(self):
+    def rename_sheets(self, regex: str = r"^[a-zA-Z]{1,2}(\d{1,2})"):
         """
-        Rename sheets based on the number in the file name.
+        Rename sheets based on captured regex in file name. Default regex captures a number with 1 or 2 digits.
         """
-        regex = r"^[a-zA-Z]{1,2}(\d{1,2})"
+        if not regex:
+            regex = r"^[a-zA-Z]{1,2}(\d{1,2})"
         file_name = self.file_name
         match = re.match(regex, file_name)
         renamed_count = 1
@@ -87,14 +89,13 @@ class ExcelCompiler:
             renamed_count += 1
 
         # Final save
-        self.wb.Save()
-        logging.info("Renaming completed and workbook saved.")
+        #self.wb.Save()
     
     # TODO: Aptos Narrow set as default font
     def copy_sheets(self):
         if not self.nwb:
             self._open_new_workbook()
-            assert self.nwb
+        assert self.nwb
         for sheet in self.wb.Sheets:
             sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copiar hoja al nuevo libro
 
@@ -145,4 +146,76 @@ class ExcelCompiler:
     #     final_path = os.path.join(save_dir, "Informe_Entregables_VF_prueba_final.xlsx")
     #     self.nwb.SaveAs(final_path)
     #     print(f"Las hojas han sido copiadas y guardadas correctamente en: {final_path}")
+
+    def save_new_workbook(self, file_name: str, path: str = ""):
+        """
+        Save the new workbook (self.nwb) to the specified path.
+        
+        Parameters:
+            path (str): The full path where the workbook should be saved.
+        """
+        if not path:
+            path = os.path.join(script_dir, "..", "..", "products", "otros")
+        print(path)
+        full_path = os.path.join(path, f"{file_name}.xlsx")
+        try:
+            self.nwb.SaveAs(full_path)
+            logging.info(f"New workbook saved at: {full_path}")
+        except Exception as e:
+            logging.error(f"Failed to save workbook: {e}")
+
+    def close_workbook(self):
+        """
+        Close the workbook without saving changes.
+        """
+        self.wb.Close(SaveChanges=False)
+        logging.info("Workbook closed without saving.")
+
+    def add_rows(self, sheet_name: str, num_rows: int):
+        sheet = self.wb.Sheets(sheet_name)
+        for _ in range(num_rows):
+            sheet.Rows(1).Insert(Shift=1)  # Shift existing rows down
+
+    def add_columns(self, sheet_name: str, num_columns: int):
+        sheet = self.wb.Sheets(sheet_name)
+        for _ in range(num_columns):
+            sheet.Columns(1).Resize(num_columns).Insert(Shift=0)
+    
+    def add_rows_to_all_sheets(self, num_rows: int):
+        for sheet in self.wb.Sheets:
+            self.add_rows(sheet.Name, num_rows)
+        logging.info(f"Added {num_rows} rows to all sheets.")
+
+    def add_columns_to_all_sheets(self, num_columns: int):
+        for sheet in self.wb.Sheets:
+            self.add_columns(sheet.Name, num_columns)
+        logging.info(f"Added {num_columns} columns to all sheets.")
+    
+    def freeze_top_row(self, sheet_name: str):
+        sheet = self.wb.Sheets(sheet_name)
+        sheet.Activate()  # Activamos la hoja
+        sheet.Cells(2, 1).Select()  # Seleccionamos la celda A2 (la fila 1 se inmoviliza por encima de ella)
+        sheet.Application.ActiveWindow.FreezePanes = True
+
+    def freeze_top_row_all_sheets(self):
+        for sheet in self.wb.Sheets:
+            self.freeze_top_row(sheet.Name)
+
+    # TODO: Add formats or templates in another script
+    def write_to_cell(self, sheet_name: str, row: int, column: int, value: str):
+        sheet = self.wb.Sheets(sheet_name)
+        cell = sheet.Cells(row, column)
+
+        # Set the value of the cell
+        cell.Value = value
+
+        logging.info(f"Written value '{value}' to cell ({row}, {column}) in sheet '{sheet_name}'.")
+    
+    
+    def write_to_cell_all_sheets(self, row: int, column: int, value: str):
+        for sheet in self.wb.Sheets:
+            sheet.Cells(row, column).Value = value
+        logging.info(f"Written value '{value}' to cell ({row}, {column}) in all sheets'.")
+
+
 
