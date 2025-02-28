@@ -1,4 +1,4 @@
-from excel_automation.classes.formats.colors import Color
+from excel_automation.classes.utils.colors import Color
 from typing import Any, TypedDict, Literal
 from functools import cached_property
 
@@ -21,13 +21,13 @@ class Formats:
         return NumericTypes().numeric_types
 
     @cached_property
-    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
         return CellFormats().cells
 
     @cached_property
     def charts(self) -> dict[
         Literal[
-            'line', 'line_simple', 'column', 'column_simple', 'bar', 
+            'line', 'line_simple', 'column', 'column_simple', 'column_stacked', 'bar', 
             'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
@@ -49,7 +49,7 @@ class NumericTypes:
 
 class CellFormats:
     @cached_property
-    def cells(self) -> dict[Literal['database', 'data_table', 'text_table', 'index'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[Literal['database', 'data_table', 'text_table', 'index', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
         """Carga y almacena formatos de celdas para hojas que contienen datos (database e index)"""
         white_borders = {
             'border': 1,
@@ -156,7 +156,19 @@ class CellFormats:
                     'border_color': Color.GRAY_LIGHT.value,
                     'valign': 'center'
                 }
-            }
+            },
+            'report': {
+                'header': {
+                    'bold': True,
+                    'valign': 'vcenter',
+                    'text_wrap': False,
+                    'font_size': 14
+                },
+                'data': {
+                    'valign': 'vcenter',
+                    'font_size': 10
+                }
+            },
         }
 
 # TODO: Test with column widths
@@ -191,6 +203,13 @@ class ChartFormats:
         self._column_simple_colors = [
             Color.BLUE_DARK.value, 
             Color.RED.value, 
+            Color.GRAY.value
+        ]
+        self._column_percent_stacked_colors = [
+            Color.GREEN_DARK.value, 
+            Color.BLUE.value, 
+            Color.BLUE_DARK.value,
+            Color.RED.value,
             Color.GRAY.value
         ]
         self._bar_colors = [
@@ -322,12 +341,20 @@ class ChartFormats:
     def _line_monthly(self):
         return {
             'colors': self._line_simple_colors,
+            'plotarea': {
+                'layout': {
+                    'x': 0.12,
+                    'y': 0.06,
+                    'width': 0.86,
+                    'height': 0.75
+                },
             'dash_type': ['square_dot', 'square_dot', 'round_dot'],
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
                 'marker': {'none': True},
                 'data_labels': {'value': False}
+                }
             }
         }
 
@@ -391,7 +418,7 @@ class ChartFormats:
     
     def _column_stacked(self):
         return {
-            'colors': self._column_colors,
+            'colors': self._column_percent_stacked_colors,
             'plotarea': {
                 'layout': {
                     'x': 0.09,
@@ -401,27 +428,33 @@ class ChartFormats:
                 }
             },
             'series': {
-                'fill': {'colors': self._column_colors},
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
-                        'bold': False,
-                        'color': Color.BLACK.value,
+                        'bold': True,
+                        'color': Color.WHITE.value,
                         'size': 10
                     }
                 }
             },
             'x_axis': {
-                'mayor_tick_mark': 'none',
+                'minor_tick_mark': 'none',
                 'major_gridlines': {
                     'visible': False
-                }
+                },
+                'line': {
+                    'width': 1,
+                    'color': Color.GRAY_LIGHT.value
+               }
             },
             'y_axis': {
                 'minor_tick_mark': 'none',
                 'major_gridlines': {
                     'visible': False,
+                },
+                'line': {
+                    'none': True
                 }
             }
         }

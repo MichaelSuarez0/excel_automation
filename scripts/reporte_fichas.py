@@ -36,8 +36,8 @@ def create_carlomar_report(file_list: list) -> None:
         excel_app.read_workbook(file_name)
         excel_app.rename_sheets()
         excel_app.add_rows_to_all_sheets(3)
-        excel_app.freeze_top_row_all_sheets()
         excel_app.write_to_cell_all_sheets(1, 1, f"Oportunidad {number}. {file_name}")
+        excel_app.freeze_top_row_all_sheets()
 
         excel_app.copy_sheets()
         excel_app.close_workbook()
@@ -54,7 +54,7 @@ def create_carlomar_report(file_list: list) -> None:
 
 
 if __name__ == "__main__":
-    file_list = file_manager.list_files(extension=False)
+    file_list = file_manager.list_files(with_extension=False)
     file_list = sort_files(file_list)
 
     #create_report(file_list)
