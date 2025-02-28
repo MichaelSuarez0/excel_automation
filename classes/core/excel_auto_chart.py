@@ -2,8 +2,9 @@ import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.formats.colors import Color
-from excel_automation.classes.formats.formats import Formats
+from excel_automation.classes.core.excel_writer import ExcelWriterXL
+from excel_automation.classes.utils.colors import Color
+from excel_automation.classes.utils.formats import Formats
 from excel_automation.classes.core.excel_formatter import ExcelFormatter
 from typing import Tuple, Literal
 import numpy as np
@@ -12,7 +13,7 @@ from icecream import ic
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "charts")
 
-
+# TODO: Use worksheet.dim_colmax
 class ExcelAutoChart:
     def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart", output_folder: str = "otros"):
         """Class to write to Excel files from DataFrames and creating charts. Engine: xlsxwriter
@@ -27,7 +28,8 @@ class ExcelAutoChart:
             Folder name inside "products" to save the file in.
         """
         self.df_list = df_list
-        self.writer = ExcelFormatter(df_list, output_name, output_folder)
+        self.writer = ExcelWriterXL(df_list, output_name, output_folder)
+        #self.formatter = ExcelFormatter(df_list, output_name, output_folder)
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
         self.sheet_count = 0
@@ -90,7 +92,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Writing to sheet
-        data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
+        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -214,7 +216,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
+        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
         
         # Raising errors
         if data_df.empty:
@@ -328,7 +330,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        data_df, worksheet = self.writer._write_to_excel(self.df_list[index], sheet_name, num_format, "database")
+        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
         
         # Raising errors
         if data_df.empty:
@@ -438,7 +440,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer._write_to_excel(
+        data_df, worksheet = self.writer._write_from_df(
             df = self.df_list[index],
             sheet_name = sheet_name,
             num_format = num_format,

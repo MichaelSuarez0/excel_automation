@@ -3,7 +3,6 @@ import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 from excel_automation.classes.utils.formats import Formats
-from excel_automation.classes.core.excel_writer import ExcelWriterXL
 from typing import Tuple, Literal
 import numpy as np
 
@@ -35,6 +34,7 @@ class ExcelFormatter:
         """
         self.df_list = df_list
         self.writer = writer
+        self.workbook: Workbook = self.writer.book
         self.format = Formats()
         
 
@@ -179,22 +179,20 @@ class ExcelFormatter:
             else:
                 worksheet.set_column(1, len(df.columns) - 1, 10)
 
-        # Hide gridlines
+        ### Basic configurations
         worksheet.hide_gridlines(2)
+        fmt = self.format.cells['index']
+        fmt['data']['num_format'] = num_format
 
         # Determine format for the first column and adjust for datetime
         first_col = df.columns[0]
-        first_col_fmt = self.workbook.add_format(self.format_cells['first_column'])
+        first_col_fmt = self.workbook.add_format(fmt['first_column'])
         if pd.api.types.is_datetime64_any_dtype(df[first_col]):
             first_col_fmt.set_num_format('mmm-yy')
 
         # Write headers with header format
         for col_num, col_name in enumerate(df.columns):
-            worksheet.write(0, col_num, col_name, self.workbook.add_format(self.format_cells["header"]))
-
-        # Define format for numeric data columns once
-        fmt = self.workbook.add_format(self.format_cells['data'])
-        fmt.set_num_format(num_format)
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt["header"]))
 
         # Write data cells with appropriate formats
         for row_idx in range(df.shape[0]):

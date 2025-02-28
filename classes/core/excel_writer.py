@@ -7,6 +7,8 @@ from excel_automation.classes.utils.formats import Formats
 from typing import Tuple, Literal
 import numpy as np
 
+from excel_automation.old_scripts import word_classes
+
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "products")
 
@@ -40,10 +42,21 @@ class ExcelWriterXL:
         output_path = os.path.join(save_dir, output_folder, f'{output_name}.xlsx') ; os.makedirs(os.path.dirname(output_path), exist_ok=True)
         self.output_name = output_name
         self.writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
-        self.formatter = ExcelFormatter(df_list, output_name, output_folder, self.writer)
+        self.formatter = ExcelFormatter(df_list, self.writer)
         self.format = Formats()
+        self.workbook: Workbook = self.writer.book
+        self.sheet_list = []
         self.df_list = df_list
     
+    def _ensure_worksheet_exist(self, sheet_name: str) -> Worksheet:
+        if sheet_name in self.writer.sheets:
+            worksheet: Worksheet = self.writer.sheets[sheet_name]
+        else:
+            # Crea una nueva hoja y la añade al diccionario de hojas
+            worksheet: Worksheet = self.workbook.add_worksheet(sheet_name)
+            self.writer.sheets[sheet_name] = worksheet
+        return worksheet
+
     def _write_from_df(self, df: pd.DataFrame, sheet_name: str, num_format: str, format_template: Literal["database", "index", "data_table", "text_table"] | None = "database") -> Tuple[pd.DataFrame, Worksheet]:
         """
         Write a DataFrame to a specific worksheet with the specified formatting template.
@@ -69,7 +82,8 @@ class ExcelWriterXL:
         Tuple[pd.DataFrame, Worksheet]
             A tuple containing the written DataFrame and the xlsxwriter Worksheet object
         """
-        worksheet: Worksheet = self.writer.sheets[sheet_name]
+        worksheet = self._ensure_worksheet_exist(sheet_name)
+        
         if format_template == "database":
             self.formatter.apply_database_format(worksheet, df, num_format)
         elif format_template == "data_table":
@@ -84,14 +98,21 @@ class ExcelWriterXL:
         return df, worksheet
     
 
-    def write_to_excel(self, sheet_name: str, row_num: int, column_num: int, value: str, header: bool = False) -> Tuple[pd.DataFrame, Worksheet]:
-        worksheet: Worksheet = self.writer.sheets[sheet_name]
+    def write_to_excel(self, sheet_name: str, row_num: int, column_num: int, value: str, header: bool = False) -> Worksheet:
+        worksheet = self._ensure_worksheet_exist(sheet_name)
         if header:
             worksheet.write_string(row_num, column_num, value, cell_format=self.format.cells["report"]["header"])
         else:
             worksheet.write_string(row_num, column_num, value, cell_format=self.format.cells["report"]["data"])
 
-    
+        return worksheet
+
+
+    def write_to_all_sheets(self, row_num: int, column_num: int, value: str, header: bool = False) -> None:
+        for sheet_name in self.sheet_list:
+            self.write_to_excel(sheet_name, row_num, column_num, value, header)
+            
+        
     def save_workbook(self):
         self.writer.close()
         print(f'✅ Excel guardado como "{self.output_name}"')
