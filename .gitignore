@@ -163,3 +163,5 @@ cython_debug/
 charts_test/
 old_scripts/
 macros/
+databases/
+products/
