@@ -3,9 +3,12 @@ from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 from icecream import ic
 import pprint
 from functools import wraps
+import os
+
+folder_name = "oportunidades"
 
 
-# TODO: Modularize
+# TODO: Corregir, esta función es antigua
 def brecha_digital_xl():
     # Variables
     regiones = ["Costa", "Sierra", "Selva"]
@@ -13,7 +16,7 @@ def brecha_digital_xl():
     file_name_base = "o8_{} - Cierre de la brecha digital"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Brecha digital")
+    excel = ExcelDataExtractor("Oportunidad - Brecha digital", folder_name)
     dfs = excel.worksheets_to_dataframes()
     dfs = excel.normalize_orientation(dfs=dfs)
     dfs[3] = excel.filter_data(dfs[3], regiones)
@@ -27,7 +30,7 @@ def brecha_digital_xl():
         #ic(df_list[2])
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, file_name)
+        chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "brecha_digital"))
         chart_creator.create_bar_chart(index=0, sheet_name="Fig1", chart_type="bar")
         chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping= "stacked", chart_type="column")
         chart_creator.create_line_chart(index=2, sheet_name="Fig3")
@@ -44,7 +47,7 @@ def edificaciones_antisismicas_xl():
     file_name_base = "o5_{} - Mayor construcción de edificaciones antisísmicas"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Edificaciones antisismicas")
+    excel = ExcelDataExtractor("Oportunidad - Edificaciones antisismicas", folder_name)
     dfs = excel.worksheets_to_dataframes(False)
     dfs = excel.normalize_orientation(dfs)
 
@@ -58,8 +61,8 @@ def edificaciones_antisismicas_xl():
         df_list[0] = df_list[0].replace("-", 0)
 
         #Charts
-        chart_creator = ExcelAutoChart(df_list, file_name_final)
-        chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", chart_template="column_simple", axis_title="Unidades")
+        chart_creator = ExcelAutoChart(df_list, file_name_final, os.path.join(folder_name, "edificaciones_antisismicas"))
+        chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", chart_template="column", axis_title="Unidades")
         chart_creator.create_table(index=2, sheet_name="Tab1")
         chart_creator.save_workbook()
         
@@ -72,11 +75,11 @@ def infraestructura_vial_xl():
     years = list(range(2014, 2025)) # No incluye 2025
     years = list(map(lambda x: str(x), years))
     categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
-    source_name= "Oportunidad - Infraestructura vial y ferroviara"
+    source_name= "Oportunidad - Infraestructura vial y ferroviaria"
     file_name_base = "o1_{} Mejoramiento de la infraestructura vial y ferroviaria"
 
     # ETL
-    excel = ExcelDataExtractor(source_name)
+    excel = ExcelDataExtractor(source_name, folder_name)
     dfs = excel.worksheets_to_dataframes(False)
 
     for departamento in departamentos:
@@ -84,12 +87,12 @@ def infraestructura_vial_xl():
         dpto= [departamento]
         file_name = file_name_base.format(departamento[:3].lower())
 
-        for id, df in enumerate(df_list[3:], start=3):
+        for id, df in enumerate(df_list[4:], start=4):
             df = excel.filter_data(df, categorias2)
             df = excel.normalize_orientation(df)
             df = excel.filter_data(df, dpto)
             df_list[id] = df
-        df_list[3] = excel.concat_multiple_dataframes(df_list[3:], df_names=years)
+        df_list[4] = excel.concat_multiple_dataframes(df_list[4:], df_names=years)
         df_list[0] = excel.normalize_orientation(df_list[0])
         df_list[1] = excel.normalize_orientation(df_list[1])
         df_list[0] = excel.filter_data(df_list[0], dpto)
@@ -109,15 +112,15 @@ def infraestructura_vial_xl():
 
         # Calcular variación en la construcción de filas
         try:
-            df_list[3]['Var %'] = ((df_list[3]['2024'] - df_list[3]['2015']) / df_list[3]['2015']) *100
+            df_list[4]['Var %'] = ((df_list[4]['2024'] - df_list[4]['2015']) / df_list[4]['2015']) *100
         except ZeroDivisionError:
-            df_list[3]['Var %'] = 0
+            df_list[4]['Var %'] = 0
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, file_name)
-        chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
-        chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", chart_type="bar", numeric_type="percentage", chart_template="bar")
-        chart_creator.create_table(index=2, sheet_name="Tab2")
+        chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "infraestructura_vial_ferroviaria"))
+        chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
+        chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", numeric_type="percentage", chart_template="bar")
+        chart_creator.create_table(index=3, sheet_name="Tab2")
         chart_creator.save_workbook()
 
 
@@ -129,7 +132,7 @@ def reforzamiento_programas_sociales_xl():
     file_name_base = "o6_{} - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
 
     # Global ETL
-    excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales")
+    excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales", folder_name)
     dfs = excel.worksheets_to_dataframes(False)
     dfs = excel.normalize_orientation(dfs)
     for dpto in departamentos:
@@ -146,10 +149,10 @@ def reforzamiento_programas_sociales_xl():
         df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:].round(2)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, final_file_name)
+        chart_creator = ExcelAutoChart(df_list, final_file_name, os.path.join(folder_name, "reforzarmiento_programas_sociales"))
         chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping="standard", chart_type="column", numeric_type="decimal_1", chart_template="column_simple")
-        chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.create_column_chart(index=1, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", chart_template="column")
+        chart_creator.create_table(index=3, sheet_name="Tab1")
         chart_creator.save_workbook()
 
 
@@ -160,7 +163,7 @@ def uso_tecnologia_educacion_xl():
     file_name_base = "o9_{} - Uso de la tecnologia e innovación"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación")
+    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación", folder_name)
     dfs = excel.worksheets_to_dataframes(False)
     dfs = excel.normalize_orientation(dfs)
 
@@ -171,18 +174,18 @@ def uso_tecnologia_educacion_xl():
         df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/100_000_000
 
          # Charts
-        chart_creator = ExcelAutoChart(df_list, file_name)
+        chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "uso_tecnologia_educacion"))
         chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line", axis_title="Porcentaje (%)")
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="bar_single")  # Cambiar a columna
-        chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_simple")
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="bar_single", highlighted_category="Peru")  # Cambiar a columna
+        chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_single")
         chart_creator.create_table(index=3, sheet_name="Tab1")
         chart_creator.save_workbook()
 
 
 if __name__ == "__main__":
     #brecha_digital_xl()
-    edificaciones_antisismicas_xl()
+    #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl()
-    #reforzamiento_programas_sociales_xl()
-    #uso_tecnologia_educacion_xl()
+    #reforzamiento_programas_sociales_xl() # Para probar
+    uso_tecnologia_educacion_xl()
     
