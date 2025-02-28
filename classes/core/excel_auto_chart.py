@@ -179,7 +179,7 @@ class ExcelAutoChart:
         sheet_name: str,
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        chart_template: Literal['column', 'column_simple', 'column_stacked'] = "column",
+        chart_template: Literal['column', 'column_simple', 'column_stacked', 'column_single'] = "column",
         axis_title: str = ""
     ) -> Worksheet:
         """Generate a column chart in Excel from data in a DataFrame list.
@@ -196,7 +196,7 @@ class ExcelAutoChart:
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
         chart_template : str, optional
-            Template for the chart configuration: 'column', 'column_simple' or 'column_stacked (default is "column").
+            Template for the chart configuration: 'column', 'column_simple', 'column_single' or 'column_stacked (default is "column").
         axis_title : str, optional
             Title for the axis (default is an empty string).
 
@@ -309,6 +309,8 @@ class ExcelAutoChart:
         numeric_type : str, optional
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
+        highlighted_category : str, optional
+            Category that will be highlighted with a different color (red).
         chart_template : str, optional
             Template for the chart configuration: 'bar', or 'bar_single' (default is "bar").
         axis_title : str, optional

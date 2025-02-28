@@ -27,7 +27,7 @@ class Formats:
     @cached_property
     def charts(self) -> dict[
         Literal[
-            'line', 'line_simple', 'column', 'column_simple', 'column_stacked', 'bar', 
+            'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 
             'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
@@ -193,9 +193,9 @@ class ChartFormats:
         ]
         self._column_colors = [
             Color.BLUE_DARK.value, 
+            Color.RED.value, 
             Color.BLUE.value, 
             Color.GREEN_DARK.value, 
-            Color.RED.value, 
             Color.ORANGE.value, 
             Color.YELLOW.value, 
             Color.GRAY.value
@@ -219,7 +219,7 @@ class ChartFormats:
         ]
 
     @cached_property
-    def charts(self) -> dict[Literal['basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'bar', 'bar_single'], Any]:
+    def charts(self) -> dict[Literal['basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 'bar_single'], Any]:
         """
         Accede a los formatos para gráficos en un solo diccionario.
         """
@@ -231,6 +231,7 @@ class ChartFormats:
             'line_monthly': self._line_monthly(),
             'column': self._column(),
             'column_simple': self._column_simple(),
+            'column_single': self._column_single(),
             'column_stacked': self._column_stacked(),
             'bar': self._bar(),
             'bar_single': self._bar_single(),
@@ -247,7 +248,7 @@ class ChartFormats:
                     'x': 0.11,
                     'y': 0.05,
                     'width': 0.85,
-                    'height': 0.77
+                    'height': 0.76
                 }
             },
             'x_axis': {
@@ -289,13 +290,32 @@ class ChartFormats:
         return {
             'colors': self._line_simple_colors,
             'dash_type': ['round_dot', 'square_dot', 'solid'],
+            'plotarea': {
+                'layout': {
+                    'x': 0.08,
+                    'y': 0.05,
+                    'width': 0.90,
+                    'height': 0.76
+                }
+            },
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
                 'marker': {'type': 'circle', 'size': 6},
                 'data_labels': {'value': False}
             },
-            
+            'y_axis': {
+                'major_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT.value}
+                }
+            },
+            'x_axis': {
+                'major_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT.value}
+                }
+            }
         }
 
     def _line_single(self):
@@ -363,14 +383,13 @@ class ChartFormats:
             'colors': self._column_colors,
             'plotarea': {
                 'layout': {
-                    'x': 0.10,
-                    'y': 0.08,
-                    'width': 0.85,
-                    'height': 0.75
+                    'x': 0.09,
+                    'y': 0.05,
+                    'width': 0.88,
+                    'height': 0.76
                 }
             },
             'series': {
-                'fill': {'colors': self._column_colors},
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
@@ -408,6 +427,43 @@ class ChartFormats:
             'y_axis': {
                 'visible': False,
                 'reverse': False,
+            },
+            'x_axis': {
+                'major_gridlines': {
+                    'visible': False,
+                    }
+            }
+        }
+    
+    def _column_single(self):
+        return {
+            'colors': self._column_simple_colors,
+            'legend': {'none': True},
+            'plotarea': {
+                'layout': {
+                    'x': 0.03,
+                    'y': 0.06,
+                    'width': 0.95,
+                    'height': 0.82
+                }
+            },
+            'series': {
+                'gap': 60,
+                'data_labels': {
+                    'position': 'outside_end',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK.value,
+                        'size': 10.5
+                    }
+                }
+            },
+            'y_axis': {
+                'visible': False,
+                'reverse': False,
+                'major_gridlines': {
+                    'visible': False,
+                    },
             },
             'x_axis': {
                 'major_gridlines': {
