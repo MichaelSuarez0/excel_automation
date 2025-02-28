@@ -2,53 +2,40 @@ import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.formats.formats import Formats
+from excel_automation.classes.utils.formats import Formats
+from excel_automation.classes.core.excel_writer import ExcelWriterXL
 from typing import Tuple, Literal
 import numpy as np
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "products")
 
-
+# Ideally should only receive Wb, Ws and Formats
 class ExcelFormatter:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart", output_folder: str = "otros"):
-        """Class to write to Excel files from DataFrames and applying format. Engine: xlsxwriter
-
+    def __init__(self, df_list: list[pd.DataFrame], writer: pd.ExcelWriter):
+        """
+        Class for applying custom formatting to Excel worksheets created with pandas.
+        Depends from ExcelWriterXL class.
+        
         Parameters
         ----------
-        df_list : list(pd.DataFrame):
-            Data that will be written to Excel
-        output_name : str, optional: 
-            File name for the output file. Defaults to "ExcelAutoChart".
-        output_folder : str, optional:
-            Folder name inside "products" to save the file in.
+        df_list : list[pd.DataFrame]
+            List of pandas DataFrames that will be formatted
+        writer : pd.ExcelWriter
+            ExcelWriter object with xlsxwriter engine
+            
+        Attributes
+        ----------
+        df_list : list[pd.DataFrame]
+            The list of DataFrames to be formatted
+        writer : pd.ExcelWriter
+            The Excel writer object injected from ExcelWriterXL
+        format : Formats
+            Object containing predefined format configurations
         """
-        output_path = os.path.join(save_dir, output_folder, f'{output_name}.xlsx') ; os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        self.output_name = output_name
-        self.writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
-        self.workbook: Workbook = self.writer.book
         self.df_list = df_list
-        self.sheet_dfs = {}
+        self.writer = writer
         self.format = Formats()
-    
-    def _write_to_excel(self, df: pd.DataFrame, sheet_name: str, num_format: str, format_template: Literal["database", "index", "data_table", "text_table"] | None = "database") -> Tuple[pd.DataFrame, Worksheet]:
-        df.to_excel(self.writer, sheet_name=sheet_name, index=False)
-        worksheet = self.writer.sheets[sheet_name]
-        self.sheet_dfs[sheet_name] = df
-        if format_template == "database":
-            self.apply_database_format(worksheet, df, num_format)
-        if format_template == "data_table":
-            self.apply_data_table_format(worksheet, df, num_format)
-        if format_template == "text_table":
-            self.apply_text_table_format(worksheet, df, num_format)    
-        if format_template == "index":
-            self.apply_index_format(worksheet, df, num_format)
-        
-        return df, worksheet
-
-    def save_workbook(self):
-        self.writer.close()
-        print(f'✅ Excel guardado como "{self.output_name}"')
         
 
     def apply_database_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
