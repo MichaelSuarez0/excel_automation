@@ -209,6 +209,18 @@ class ExcelCompiler:
         # Set the value of the cell
         cell.Value = value
 
+        # # Create a Range object for the cell
+        # cell_range = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
+        
+        # # Set the value
+        # cell_range.Value = value
+        
+        # # Apply formatting
+        # cell_range.Font.Name = 'Calibri'
+        # cell_range.Font.Size = 14
+        # cell_range.Font.Bold = True
+        # cell_range.Font.Color = 255  # Red color
+
         logging.info(f"Written value '{value}' to cell ({row}, {column}) in sheet '{sheet_name}'.")
     
     

@@ -22,11 +22,10 @@ def inmanejable_inflacion_departamental():
     df_list[0] = excel.filter_data(df_list[0], departamentos)
     #excel.dataframe_to_worksheet(df_list[0], "Fig1")
     #pprint.pprint(df_list[0])
-    #pprint.pprint(df_list[2])
 
     #Charts
     chart_creator = ExcelAutoChart(df_list, final_file_name)
-    chart_creator.create_line_chart(index=0, sheet_name="Fig1", markers_add=False, numeric_type="decimal_2")
+    chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2" , chart_template="line_monthly")
     chart_creator.create_bar_chart(index=1, sheet_name="Fig2", chart_type= "bar", numeric_type="decimal_2")
     chart_creator.create_table(index=2, sheet_name="Tab1")
     chart_creator.create_table(index=3, sheet_name="Tab2")

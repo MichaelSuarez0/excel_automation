@@ -272,8 +272,8 @@ class ExcelAutoChart:
             'min': 0,
         })
         chart.set_x_axis({
-            **self.format.charts['basic']["y_axis"],
-            **configs.get('y_axis', {}),
+            **self.format.charts['basic']["x_axis"],
+            **configs.get('x_axis', {}),
             'num_format': '@',
         })
 
