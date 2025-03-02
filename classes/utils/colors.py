@@ -20,3 +20,19 @@ class Color(Enum):
     def no_hash(self):
         return self.value.lstrip("#")
     
+    @property
+    def rgb(self):
+        hex_color = self.value.lstrip("#")
+        return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+
+    @property
+    def win32(self):
+        # Remove the '#' if present
+        hex_color = self.value.lstrip('#')
+        # Convert the hex values to integers
+        r = int(hex_color[0:2], 16)
+        g = int(hex_color[2:4], 16)
+        b = int(hex_color[4:6], 16)
+        # Rearrange to BGR and return the combined integer
+        return (b << 16) + (g << 8) + r
+    
