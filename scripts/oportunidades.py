@@ -3,11 +3,40 @@ from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 from icecream import ic
 import pprint
 from functools import wraps
+import pandas as pd
+from string import Template
+from typing import Callable, Tuple
+
+def sustituir_departamento(text, departamento):
+    text_template = Template(text)
+    return text_template.substitute(Departamento=departamento)
+
+def convert_index_info(df: pd.DataFrame, departamento) -> pd.DataFrame:
+    df = df[["Título", "Fuente"]].copy()
+    df['Título'] = df['Título'].apply(lambda x: sustituir_departamento(x, departamento))
+    return df
+
+
+# TODO: wrapper just to save
+# TODO: Fix warnings
+# TODO: Crear formato index
+def agregar_formato_reporte(func: Callable):
+    @wraps(func)
+    def wrapper(*args, **kwargs)-> Tuple[ExcelDataExtractor, ExcelAutoChart]:
+        excel, chart_creator, departamentos = func(*args, **kwargs)
+        index = excel.worksheet_to_dataframe(0)
+        index_clean = convert_index_info(index, departamentos[0])
+        chart_creator.writer.write_from_df(index_clean, "Index", "", "text_table")
+        chart_creator.save_workbook()
+    return wrapper
+
+# TODO: Wrapper para añadir el título (tal vez esto podría hacerse tmb con excel compiler)
+
 
 # ====================================================== #
 # ================== Oportunidades ===================== #
 # ====================================================== #
-def brecha_digital():
+def brecha_digital()-> Tuple[ExcelDataExtractor, ExcelAutoChart]:
     # Variables
     regiones = ["Costa", "Sierra", "Selva", "Total"]
     departamentos = ["Lima Region", "Lima Metropolitana"]
@@ -31,6 +60,8 @@ def brecha_digital():
     #chart_creator.create_table(index=3, sheet_name="Tab1")
     chart_creator.save_workbook()
 
+    return excel, chart_creator
+
 
 def edificaciones_antisismicas():
     # Variables
@@ -52,31 +83,35 @@ def edificaciones_antisismicas():
     chart_creator.create_table(index=2, sheet_name="Tab1")
     chart_creator.save_workbook()
 
-
+@agregar_formato_reporte
 def uso_tecnologia_educacion():
     # Variables
     departamentos = ["Lima"]
     file_name = "o9_lim - Uso de la tecnologia e innovación"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación")
+    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación", "oportunidades")
+    index = excel.worksheet_to_dataframe(0)
+
     df_list = excel.worksheets_to_dataframes(False)
     df_list = excel.normalize_orientation(dfs=df_list)
     df_list[2] = excel.filter_data(df_list[2], departamentos)
-    df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/1_000_000_000
+    df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/1_000_000_000.0
     #excel.dataframe_to_worksheet(df_list[0], "Fig1")
     #ic(df_list)
 
     # # Charts
-    chart_creator = ExcelAutoChart(df_list, file_name)
+    chart_creator = ExcelAutoChart(df_list, file_name, "")
     chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line")
     # chart_creator.create_line_chart(index=0, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_monthly")
     # chart_creator.create_line_chart(index=0, sheet_name="Fig3", numeric_type="decimal_2", chart_template="line_simple")
-    chart_creator.create_line_chart(index=0, sheet_name="Fig4", numeric_type="decimal_2", chart_template="line_single")
-    # chart_creator.create_column_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="column_simple")
-    # chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_simple")
+    #chart_creator.create_line_chart(index=0, sheet_name="Fig4", numeric_type="decimal_2", chart_template="line_single")
+    chart_creator.create_column_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="column_single")
+    chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_single")
     # chart_creator.create_table(index=3, sheet_name="Tab1")
-    chart_creator.save_workbook()
+    #chart_creator.save_workbook()
+
+    return excel, chart_creator, departamentos
 
 
 def reforzamiento_programas_sociales():
@@ -86,7 +121,7 @@ def reforzamiento_programas_sociales():
     final_file_name = "o6_lim - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales")
+    excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales", "oportunidades")
     df_list = excel.worksheets_to_dataframes(False)
     df_list = excel.normalize_orientation(dfs=df_list)
     df_list[0] = excel.filter_data(df_list[0], departamentos1)
@@ -97,7 +132,7 @@ def reforzamiento_programas_sociales():
     df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:].round(2)
 
     # Charts
-    chart_creator = ExcelAutoChart(df_list, final_file_name)
+    chart_creator = ExcelAutoChart(df_list, final_file_name, "")
     chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="percentage")
     chart_creator.create_bar_chart(index=1, sheet_name="Fig2", grouping="standard", chart_type="column", numeric_type="decimal_1")
     chart_creator.create_table(index=3, sheet_name="Tab1")
@@ -207,12 +242,13 @@ def uso_masivo_telecomunicaciones():
 
 if __name__ == "__main__":
     #bellezas_naturales()
-    #uso_tecnologia_educacion()
+    
+    uso_tecnologia_educacion()
     #edificaciones_antisismicas()
     #brecha_digital()
     #reforzamiento_programas_sociales()
     #infraestructura_vial()
-    uso_masivo_telecomunicaciones()
+    #uso_masivo_telecomunicaciones()
 
 
 
