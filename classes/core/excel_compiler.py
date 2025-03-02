@@ -4,6 +4,9 @@ import re
 import os
 import time
 import logging
+from excel_automation.classes.utils.colors import Color
+from win32com.client import constants
+from pandas import DataFrame
 
 
 # Set up basic configuration for logging
@@ -13,12 +16,12 @@ logging.basicConfig(level=logging.INFO,
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class ExcelCompiler:
-    def __init__(self, open_new = True, visible= True):
+    def __init__(self, open_new = True, visible= True, reading_folder: str = "oportunidades"):
         self.excel_app = win32.Dispatch('Excel.Application')
         self.excel_app.Visible = visible
         self.output_name: str = None
         self.output_folder: str = None
-        self.reading_path: str = os.path.join(script_dir, "..", "..", "products", "oportunidades")
+        self.reading_path: str = os.path.join(script_dir, "..", "..", "products", reading_folder)
         self.output_path = os.path.join(script_dir, "..", "..", "products", "otros")
         self.nwb = None
         if open_new:
@@ -97,7 +100,7 @@ class ExcelCompiler:
             self._open_new_workbook()
         assert self.nwb
         for sheet in self.wb.Sheets:
-            sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copiar hoja al nuevo libro
+            sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copy sheet to new workbook
 
         logging.info("Sheets copied to new workbook")
 
@@ -147,23 +150,6 @@ class ExcelCompiler:
     #     self.nwb.SaveAs(final_path)
     #     print(f"Las hojas han sido copiadas y guardadas correctamente en: {final_path}")
 
-    def save_new_workbook(self, file_name: str, path: str = ""):
-        """
-        Save the new workbook (self.nwb) to the specified path.
-        
-        Parameters:
-            path (str): The full path where the workbook should be saved.
-        """
-        if not path:
-            path = os.path.join(script_dir, "..", "..", "products", "otros")
-        print(path)
-        full_path = os.path.join(path, f"{file_name}.xlsx")
-        try:
-            self.nwb.SaveAs(full_path)
-            logging.info(f"New workbook saved at: {full_path}")
-        except Exception as e:
-            logging.error(f"Failed to save workbook: {e}")
-
     def close_workbook(self):
         """
         Close the workbook without saving changes.
@@ -202,32 +188,103 @@ class ExcelCompiler:
             self.freeze_top_row(sheet.Name)
 
     # TODO: Add formats or templates in another script
+    # TODO:   ws.Columns("B:B").AutoFit()
+    def write_title(self, sheet_name: str, row: int, column: int, value: str):
+        sheet = self.wb.Sheets(sheet_name)
+        cell = sheet.Cells(row, column)
+
+        # Create a Range object for the cell
+        #cell = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
+        
+        # Set the value
+        cell.Value = value
+        
+        # Apply formatting
+        cell.Font.Name = 'Calibri'
+        cell.Font.Size = 14
+        cell.Font.Bold = True
+        cell.Font.Color = Color.BLUE_DARK.win32
+        
+        cell.WrapText = False
+    
     def write_to_cell(self, sheet_name: str, row: int, column: int, value: str):
         sheet = self.wb.Sheets(sheet_name)
         cell = sheet.Cells(row, column)
 
-        # Set the value of the cell
+        # Create a Range object for the cell
+        #cell = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
+        
+        # Set the value
         cell.Value = value
-
-        # # Create a Range object for the cell
-        # cell_range = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
         
-        # # Set the value
-        # cell_range.Value = value
+        # Apply formatting
+        cell.Font.Name = 'Calibri'
+        cell.Font.Size = 14
+        cell.Font.Bold = True
+        cell.Font.Color = Color.BLUE_DARK.win32
         
-        # # Apply formatting
-        # cell_range.Font.Name = 'Calibri'
-        # cell_range.Font.Size = 14
-        # cell_range.Font.Bold = True
-        # cell_range.Font.Color = 255  # Red color
+        cell.WrapText = False
+    
+    def write_table(self, sheet_name: str, df: DataFrame, start_row: int = 1 , start_col: int = 1):
+        # Check if sheet exists, if not create it
+        sheet_exists = False
+        for i in range(1, self.nwb.Sheets.Count + 1):
+            if self.nwb.Sheets(i).Name == sheet_name:
+                sheet_exists = True
+                break
+        
+        if not sheet_exists:
+            # Add a new sheet with the specified name
+            sheet = self.nwb.Sheets.Add()
+            sheet.Name = sheet_name
+        
+        # Escribe los encabezados del DataFrame
+        for j, col_name in enumerate(df.columns):
+            cell = sheet.Cells(start_row, start_col + j)
+            cell.Value = col_name
+            # Formato para encabezados
+            cell.Font.Name = 'Calibri'
+            cell.Font.Size = 10
+            cell.Font.Bold = True
+            cell.Font.Color = Color.WHITE.win32
+            cell.Interior.Color = Color.BLUE_DARK.win32
+            cell.WrapText = False
 
-        logging.info(f"Written value '{value}' to cell ({row}, {column}) in sheet '{sheet_name}'.")
+        # Escribe las filas de datos
+        for i, row_data in enumerate(df.itertuples(index=False)):
+            for j, value in enumerate(row_data):
+                cell = sheet.Cells(start_row + i + 1, start_col + j)
+                cell.Value = value
+                # Format for data cells
+                cell.Font.Name = 'Calibri'
+                cell.Font.Size = 10
+                cell.Font.Bold = False
+                cell.WrapText = True
     
     
-    def write_to_cell_all_sheets(self, row: int, column: int, value: str):
+    def write_to_cell_all_sheets(self, start_row: int, start_column: int, value: str):
         for sheet in self.wb.Sheets:
-            sheet.Cells(row, column).Value = value
-        logging.info(f"Written value '{value}' to cell ({row}, {column}) in all sheets'.")
+            sheet_name = sheet.Name  # Obtener el nombre de la hoja
+            self.write_title(sheet_name, start_row, start_column, value)
+        logging.info(f"Written value '{value}' to cell ({start_row}, {start_column}) in all sheets'.")
+    
+    
+    def save_new_workbook(self, file_name: str, path: str = ""):
+        """
+        Save the new workbook (self.nwb) to the specified path.
+        
+        Parameters:
+            path (str): The full path where the workbook should be saved.
+        """
+        if not path:
+            path = os.path.join(script_dir, "..", "..", "products", "otros")
+        print(path)
+        full_path = os.path.join(path, f"{file_name}.xlsx")
+        try:
+            self.nwb.SaveAs(full_path, ConflictResolution=2)
+            logging.info(f"New workbook saved at: {full_path}")
+        except Exception as e:
+            logging.error(f"Failed to save workbook: {e}")
 
 
 
