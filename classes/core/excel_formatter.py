@@ -59,7 +59,7 @@ class ExcelFormatter:
         for row_idx in range(df.shape[0]):
             cell_value = df.iloc[row_idx, 0]
             # First column (e.g., dates or text)
-            if isinstance(cell_value, str) and ("/" in cell_value or "-" in cell_value):
+            if isinstance(cell_value, pd.Timestamp): 
                 try: 
                     date_value = pd.to_datetime(cell_value)
                     excel_date = (date_value - pd.Timestamp("1899-12-30")).days
@@ -169,45 +169,40 @@ class ExcelFormatter:
             worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt["header"]))
 
 
-    def apply_index_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
-        """NOT IMPLEMENTED"""
+    def apply_index_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str = ""):
         # Set column widths
-        worksheet.set_column('A:A', 15)
-        if len(df.columns) > 1:
-            if len(str(df.iloc[0,1])) > 11:
-                worksheet.set_column(1, len(df.columns) - 1, 14)
-            else:
-                worksheet.set_column(1, len(df.columns) - 1, 10)
+        worksheet.set_column('A:A', 10)
+        worksheet.set_column('B:B', 40)
+        worksheet.set_column('C:C', 40)
+        worksheet.set_column('D:D', 15)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
         fmt = self.format.cells['index']
-        fmt['data']['num_format'] = num_format
 
-        # Determine format for the first column and adjust for datetime
-        first_col = df.columns[0]
-        first_col_fmt = self.workbook.add_format(fmt['first_column'])
-        if pd.api.types.is_datetime64_any_dtype(df[first_col]):
-            first_col_fmt.set_num_format('mmm-yy')
-
+        ### Writing
         # Write headers with header format
         for col_num, col_name in enumerate(df.columns):
-            worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt["header"]))
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt['header']))
 
-        # Write data cells with appropriate formats
+        # Modify base formats
+        gray_format = {**fmt['first_column']}
+        gray_bold_format = {**gray_format, 'bold': True, 'align': 'left'}
+        white_format = {**fmt['data'], 'right': 0}
+        white_bold_format = {**white_format, 'bold': True, 'align': 'left'}
+        
+        # Write table contents with alternating colors and bold for first column
         for row_idx in range(df.shape[0]):
-            # First column (e.g., dates or text)
-            cell_value = df.iloc[row_idx, 0]
-            worksheet.write(row_idx + 1, 0, cell_value, first_col_fmt)
-
-            # Other columns (numeric data)
-            for col_idx in range(1, df.shape[1]):
+            for col_idx in range(df.shape[1]):
                 cell_value = df.iloc[row_idx, col_idx]
 
-                # Skip NaN/Inf values by checking if the value is NaN or Inf
-                if pd.isna(cell_value) or np.isinf(cell_value):
-                    worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
+                # Select format based on column and row index
+                if col_idx == 0:
+                    cell_format = self.workbook.add_format(gray_bold_format) if row_idx % 2 == 0 else self.workbook.add_format(white_bold_format)
                 else:
-                    worksheet.write(row_idx + 1, col_idx, cell_value, fmt)
+                    cell_format = self.workbook.add_format(gray_format) if row_idx % 2 == 0 else self.workbook.add_format(white_format)
+
+                worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
+    
     
 

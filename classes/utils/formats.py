@@ -131,7 +131,7 @@ class CellFormats:
                 'data': {
                     'border': 1,
                     'border_color': Color.GRAY_LIGHT.value,
-                    'align': 'center',
+                    'align': 'right',
                     'valign': 'vcenter',
                     'font_size': 10
                 }
@@ -144,17 +144,24 @@ class CellFormats:
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
-                    'text_wrap': True
+                    'text_wrap': True,
+                    'font_size': 10
                 },
                 'first_column': {
                     **white_borders,
                     'bg_color': Color.GRAY_LIGHT.value,
-                    'text_wrap': True
+                    'valign': 'vcenter',
+                    'align': 'justify',
+                    'text_wrap': True,
+                    'font_size': 10
                 },
                 'data': {
                     'border': 1,
                     'border_color': Color.GRAY_LIGHT.value,
-                    'valign': 'center'
+                    'align': 'justify',
+                    'valign': 'vcenter',
+                    'text_wrap': True,
+                    'font_size': 10
                 }
             },
             'report': {
@@ -363,12 +370,13 @@ class ChartFormats:
             'colors': self._line_simple_colors,
             'plotarea': {
                 'layout': {
-                    'x': 0.12,
-                    'y': 0.06,
-                    'width': 0.86,
-                    'height': 0.75
-                },
-            'dash_type': ['square_dot', 'square_dot', 'round_dot'],
+                    'x': 0.09,
+                    'y': 0.05,
+                    'width': 0.88,
+                    'height': 0.76
+                }
+            },
+            'dash_type': ['solid', 'square_dot', 'round_dot'],
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
@@ -376,7 +384,7 @@ class ChartFormats:
                 'data_labels': {'value': False}
                 }
             }
-        }
+        
 
     def _column(self):
         return {
