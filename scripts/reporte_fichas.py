@@ -63,19 +63,32 @@ def create_carlomar_report(file_list: list) -> None:
 
 
 def create_report_test(file_list: list, df: pd.DataFrame) -> None:
+    # Asume que la primera hoja tiene el índice de las figuras
     for file_full_name in file_list:
         number = extract_number(file_full_name)
         file_name = extract_file_name(file_full_name)
 
         excel_app.read_workbook(file_full_name)
+        excel_app.delete_sheet(0)
         excel_app.rename_sheets()
         excel_app.add_rows_to_all_sheets(5)
-        excel_app.write_to_cell_all_sheets(1, 1, f"Oportunidad {number}. {file_name}")
         excel_app.freeze_top_row_all_sheets()
-        for sheet in range(excel_app.count_sheets-1):
-            excel_app.write_to_cell(sheet+2, 3, 1, df.iloc[sheet,1], bold=True)
-            excel_app.write_to_cell(sheet+2, 4, 1, df.iloc[sheet,3])
-            excel_app.get_last_row(sheet+2)
+
+        ic(df)
+        for sheet in range(excel_app.count_sheets):
+            last_row = excel_app.get_last_row(sheet+1)
+            excel_app.write_to_cell(sheet+1, 3, 1, df.iloc[sheet,1], bold=True)
+            excel_app.write_to_cell(sheet+1, 4, 1, df.iloc[sheet,3])
+            if df.iloc[sheet,2]:
+                if last_row < 30:
+                    excel_app.write_to_cell(sheet+1, last_row+3, 1, "Fuente:", bold=True)
+                    excel_app.write_to_cell(sheet+1, last_row+3, 2, df.iloc[sheet,2])
+                else:
+                    excel_app.write_to_cell(sheet+1, 25, 7, "Fuente:", bold=True)
+                    excel_app.write_to_cell(sheet+1, 25, 8, df.iloc[sheet,2])
+
+        excel_app.add_columns_to_all_sheets(1, 2)
+        excel_app.write_to_cell_all_sheets(1, 1, f"Oportunidad {number}. {file_name}")
 
         excel_app.copy_sheets()
         excel_app.close_workbook()
@@ -101,7 +114,7 @@ if __name__ == "__main__":
 
     # #create_report(file_list)
     # create_carlomar_report(file_list)
-    excel_extractor = ExcelDataExtractor("o2_lim - Aprovechamiento de la franja y ruta de la seda", custom_path="products/oportunidades")
+    excel_extractor = ExcelDataExtractor("o2_lim - Aprovechamiento de la franja y ruta de la seda", custom_path=os.path.join("products", "oportunidades"))
     df = excel_extractor.worksheet_to_dataframe(0)
     excel_app = ExcelCompiler(open_new=False)
     create_report_test(["o2_lim - Aprovechamiento de la franja y ruta de la seda"], df)

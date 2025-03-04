@@ -118,6 +118,18 @@ class ExcelCompiler:
             sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copy sheet to new workbook
 
         logging.info("Sheets copied to new workbook")
+    
+    def delete_sheet(self, index: int):
+        """Deletes a sheet from the workbook using zero-based indexing."""
+        index = index + 1 
+        if self.wb and 1 <= index <= self.wb.Sheets.Count:
+            self.excel_app.DisplayAlerts = False
+            self.wb.Sheets(index).Delete()
+            logging.info(f"Sheet at index {index} deleted from workbook")
+            self.excel_app.DisplayAlerts = True
+        else:
+            logging.warning(f"Invalid index {index}. Workbook has {self.wb.Sheets.Count} sheets.")
+
 
     
     # def order_sheets(self, pattern: str, save_dir: str):
@@ -172,24 +184,26 @@ class ExcelCompiler:
         self.wb.Close(SaveChanges=False)
         logging.info("Workbook closed without saving.")
 
-    def add_rows(self, sheet_name: str, num_rows: int):
+    def add_rows(self, sheet_name: str, num_rows: int, height: float = 15.00):
         sheet = self.wb.Sheets(sheet_name)
         for _ in range(num_rows):
             sheet.Rows(1).Insert(Shift=1)  # Shift existing rows down
+            sheet.Rows(1).RowHeight = height  
 
-    def add_columns(self, sheet_name: str, num_columns: int):
+    def add_columns(self, sheet_name: str, num_columns: int, width: float = 8.43):
         sheet = self.wb.Sheets(sheet_name)
         for _ in range(num_columns):
-            sheet.Columns(1).Resize(num_columns).Insert(Shift=0)
+            sheet.Columns(1).Insert(Shift=0)
+            sheet.Columns(1).ColumnWidth = width
     
-    def add_rows_to_all_sheets(self, num_rows: int):
+    def add_rows_to_all_sheets(self, num_rows: int, height: float = 15.00):
         for sheet in self.wb.Sheets:
-            self.add_rows(sheet.Name, num_rows)
+            self.add_rows(sheet.Name, num_rows, height)
         logging.info(f"Added {num_rows} rows to all sheets.")
 
-    def add_columns_to_all_sheets(self, num_columns: int):
+    def add_columns_to_all_sheets(self, num_columns: int, width: float = 8.43):
         for sheet in self.wb.Sheets:
-            self.add_columns(sheet.Name, num_columns)
+            self.add_columns(sheet.Name, num_columns, width)
         logging.info(f"Added {num_columns} columns to all sheets.")
     
     def freeze_top_row(self, sheet_name: str):
@@ -212,7 +226,6 @@ class ExcelCompiler:
         sheet = self._ensure_sheet_exists(sheet)
         used_range = sheet.UsedRange
         last_row = used_range.Row + used_range.Rows.Count - 1
-        print(f"Last row with data: {last_row}")
         return last_row
         
 
