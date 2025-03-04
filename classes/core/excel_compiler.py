@@ -8,15 +8,31 @@ from excel_automation.classes.utils.colors import Color
 from win32com.client import constants
 from pandas import DataFrame
 
-
 # Set up basic configuration for logging
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     handlers=[logging.FileHandler('app.log'), logging.StreamHandler()])
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
+
+# TODO: Change sheet_name with sheet
 class ExcelCompiler:
     def __init__(self, open_new = True, visible= True, reading_folder: str = "oportunidades"):
+        """
+        A class to manage and compile Excel workbooks using the Windows COM interface.
+
+        This class initializes an instance of Microsoft Excel, optionally opens a new workbook, 
+        and sets up paths for reading and output files.
+
+        Parameters
+        ----------
+        open_new : bool, optional
+            If True, a new Excel workbook is opened upon initialization (default is True).
+        visible : bool, optional
+            If True, the Excel application is opened in visible mode (default is True).
+        reading_folder : str, optional
+            Name of the subfolder within 'products' where input files are located (default is "oportunidades").
+        """
         self.excel_app = win32.Dispatch('Excel.Application')
         self.excel_app.Visible = visible
         self.output_name: str = None
@@ -49,7 +65,6 @@ class ExcelCompiler:
 
     @property
     def count_sheets(self) -> int:
-        logging.info(f'El archivo tiene {self.wb.Sheets.Count} hojas.')
         return self.wb.Sheets.Count
 
     # @property
@@ -186,11 +201,25 @@ class ExcelCompiler:
     def freeze_top_row_all_sheets(self):
         for sheet in self.wb.Sheets:
             self.freeze_top_row(sheet.Name)
+    
+    # TODO: Replicate sheet creation as excel_writer if sheet name not exists
+    def _ensure_sheet_exists(self, sheet: int | str):
+        if not isinstance(sheet, (int, str)):
+            raise ValueError("sheet must be either an int (index) or str (name)")
+        return self.wb.Sheets(sheet)
+    
+    def get_last_row(self, sheet)-> int:
+        sheet = self._ensure_sheet_exists(sheet)
+        used_range = sheet.UsedRange
+        last_row = used_range.Row + used_range.Rows.Count - 1
+        print(f"Last row with data: {last_row}")
+        return last_row
+        
 
     # TODO: Add formats or templates in another script
     # TODO:   ws.Columns("B:B").AutoFit()
-    def write_title(self, sheet_name: str, row: int, column: int, value: str):
-        sheet = self.wb.Sheets(sheet_name)
+    def write_title(self, sheet: str | int, row: int, column: int, value: str):
+        sheet = self._ensure_sheet_exists(sheet)
         cell = sheet.Cells(row, column)
 
         # Create a Range object for the cell
@@ -203,12 +232,12 @@ class ExcelCompiler:
         cell.Font.Name = 'Calibri'
         cell.Font.Size = 14
         cell.Font.Bold = True
-        cell.Font.Color = Color.BLUE_DARK.win32
+        cell.Font.Color = Color.BLACK.win32
         
         cell.WrapText = False
     
-    def write_to_cell(self, sheet_name: str, row: int, column: int, value: str):
-        sheet = self.wb.Sheets(sheet_name)
+    def write_to_cell(self, sheet: int | str, row: int, column: int, value: str, bold: bool = False):
+        sheet = self._ensure_sheet_exists(sheet)
         cell = sheet.Cells(row, column)
 
         # Create a Range object for the cell
@@ -219,12 +248,13 @@ class ExcelCompiler:
         
         # Apply formatting
         cell.Font.Name = 'Calibri'
-        cell.Font.Size = 14
-        cell.Font.Bold = True
+        cell.Font.Size = 10
+        cell.Font.Bold = bold
         cell.Font.Color = Color.BLUE_DARK.win32
         
         cell.WrapText = False
     
+    # TODO: modularize sheet exists
     def write_table(self, sheet_name: str, df: DataFrame, start_row: int = 1 , start_col: int = 1):
         # Check if sheet exists, if not create it
         sheet_exists = False
