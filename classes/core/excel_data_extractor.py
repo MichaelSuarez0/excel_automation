@@ -82,25 +82,42 @@ class ExcelDataExtractor():
         return count
     
     # Reading methods
-    def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
-        """Reads sheet and return a DataFrame, may specify worksheet index"""
-        sheet_name = self.wb.sheetnames[sheet_index] if sheet_index else self.wb.sheetnames[0]
-        df = pd.read_excel(self.file_path, sheet_name)
+    def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
+        # Remove rows/columns that are completely empty, then replace NaN with ""
+        df = df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1).fillna("")
+        
+        # Remove extra spaces from string columns
+        object_columns = df.select_dtypes(include=['object']).columns
+        for col in object_columns:
+            df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
+        
         return df
-    
-    def worksheets_to_dataframes(self, include_first = False) -> list[pd.DataFrame]:
-        """Reads all sheets at once and returns a list of DataFrames, may specify to skip first worksheet"""
-        # This method reads all sheets at once a returns a dictionary of DataFrames with keys:values -> sheet_name:df
-        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) 
-        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys())
-        dfs = [dfs_dict[name] for name in sheet_names]
-        dfs = [df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1) for df in dfs]
-        # Quitar espacios sobrantes de las columnas de tipo string
-        for df in dfs:
-            object_columns = df.select_dtypes(include=['object']).columns
-            for col in object_columns:
-                df[col] = df[col].apply(lambda x: x.strip() if isinstance(x, str) else x)
-        return dfs
+
+    def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
+        """
+        Reads a single worksheet and returns it as a cleaned DataFrame.
+        
+        Parameters
+        ----------
+        sheet_index : int, optional
+            The index of the worksheet to read. If not provided, the first sheet is used.
+        """
+        sheet_name = self.wb.sheetnames[sheet_index] if sheet_index is not None else self.wb.sheetnames[0]
+        df = pd.read_excel(self.file_path, sheet_name=sheet_name)
+        return self._preprocess_dataframe(df)
+
+    def worksheets_to_dataframes(self, include_first: bool = False) -> list[pd.DataFrame]:
+        """
+        Reads all worksheets at once and returns a list of cleaned DataFrames.
+        
+        Parameters
+        ----------
+        include_first : bool, optional
+            Whether to include the first worksheet. By default, the first worksheet is skipped.
+        """
+        dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This pandas funct returns a dictionary: {sheet_name: DataFrame}
+        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys()) # Select the sheet names based on whether the first sheet should be included
+        return [self._preprocess_dataframe(dfs_dict[name]) for name in sheet_names]
     
     # Transformation methods
     def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> pd.DataFrame | list[pd.DataFrame]:
