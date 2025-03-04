@@ -8,7 +8,7 @@ from typing import Optional
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
 class ExcelDataExtractor():
-    def __init__(self, file_name: str, folder: str = "otros"):
+    def __init__(self, file_name: str, folder: str = "otros", custom_path: str = ""):
         """Class to obtain data from an Excel file, convert to DataFrame, apply transformations, and export it. 
         Engine: mostly pandas
 
@@ -18,8 +18,13 @@ class ExcelDataExtractor():
                 The name of the Excel file to be loaded (from databases folder)
         folder : str, optional:
             Folder name inside "databases" where file is located (defaults to "otros")
+        custom_path : str, optional
+            If provided, this path (starting from base dir) is used instead of constructing a path based on 'databases' + 'folder'.
         """
-        self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
+        if custom_path:
+            self.file_path = os.path.join(script_dir, "..", "..", custom_path,  f'{file_name}.xlsx')
+        else:
+            self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
         self.output_path = os.path.join(script_dir, "..", "..", "products")
         self.wb = None
         self.ws = None
@@ -138,6 +143,7 @@ class ExcelDataExtractor():
         return normalized_dfs
     
     # TODO: Raise KeyError if selected category is not found
+    # TODO: How parameter (vertical / horizontal)
     def filter_data(
         self,
         df: pd.DataFrame,

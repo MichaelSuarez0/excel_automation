@@ -7,14 +7,12 @@ from excel_automation.classes.utils.formats import Formats
 from typing import Tuple, Literal
 import numpy as np
 
-from excel_automation.old_scripts import word_classes
-
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "products")
 
 
 class ExcelWriterXL:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "automated_excel", output_folder: str = "otros"):
+    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "automated_report", output_folder: str = "otros"):
         """
         A class for writing multiple pandas DataFrames to Excel files with customized formatting.
         Uses xlsxwriter as the underlying engine and works with the ExcelFormatter class for styling.
@@ -48,7 +46,7 @@ class ExcelWriterXL:
         self.sheet_list = []
         self.df_list = df_list
     
-    def _ensure_worksheet_exist(self, sheet_name: str) -> Worksheet:
+    def _ensure_worksheet_exists(self, sheet_name: str) -> Worksheet:
         if sheet_name in self.writer.sheets:
             worksheet: Worksheet = self.writer.sheets[sheet_name]
         else:
@@ -57,7 +55,7 @@ class ExcelWriterXL:
             self.writer.sheets[sheet_name] = worksheet
         return worksheet
 
-    def _write_from_df(self, df: pd.DataFrame, sheet_name: str, num_format: str, format_template: Literal["database", "index", "data_table", "text_table"] | None = "database") -> Tuple[pd.DataFrame, Worksheet]:
+    def write_from_df(self, df: pd.DataFrame, sheet_name: str, num_format: str, format_template: Literal["database", "index", "data_table", "text_table"] | None = "database") -> Tuple[pd.DataFrame, Worksheet]:
         """
         Write a DataFrame to a specific worksheet with the specified formatting template.
         
@@ -82,7 +80,7 @@ class ExcelWriterXL:
         Tuple[pd.DataFrame, Worksheet]
             A tuple containing the written DataFrame and the xlsxwriter Worksheet object
         """
-        worksheet = self._ensure_worksheet_exist(sheet_name)
+        worksheet = self._ensure_worksheet_exists(sheet_name)
         
         if format_template == "database":
             self.formatter.apply_database_format(worksheet, df, num_format)
@@ -99,7 +97,7 @@ class ExcelWriterXL:
     
 
     def write_to_excel(self, sheet_name: str, row_num: int, column_num: int, value: str, header: bool = False) -> Worksheet:
-        worksheet = self._ensure_worksheet_exist(sheet_name)
+        worksheet = self._ensure_worksheet_exists(sheet_name)
         if header:
             worksheet.write_string(row_num, column_num, value, cell_format=self.format.cells["report"]["header"])
         else:

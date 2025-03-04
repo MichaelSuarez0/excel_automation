@@ -54,3 +54,4 @@ def inmanejable_inflacion_departamental():
 
 if __name__ == "__main__":
     inmanejable_inflacion_departamental()
+    

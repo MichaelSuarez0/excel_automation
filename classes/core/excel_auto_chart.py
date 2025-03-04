@@ -33,16 +33,17 @@ class ExcelAutoChart:
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
         self.sheet_count = 0
+        self.sheet_list = []
         
     # TODO: Add in formats
     # TODO: Consider discussing chart font being Aptos Narrow
-    def _create_base_chart(self, chart_type: str, chart_subtype: str = ""):
+    def _create_base_chart(self, chart_type: str, chart_subtype: str = "", legend = False):
         """Default settings for all chart types"""
         chart = self.workbook.add_chart({'type': chart_type}) if not chart_subtype else self.workbook.add_chart({'type': chart_type, 'subtype': chart_subtype})
         configs = self.format.charts["basic"]
         chart.set_title({'name': ''})
         chart.set_size(configs["size"])
-        chart.set_legend(configs["legend"])
+        chart.set_legend({'none': True}) if legend == False < 2 else chart.set_legend({'position': 'bottom'})
         chart.set_chartarea(configs["chartarea"])
         chart.set_plotarea(configs["plotarea"])
 
@@ -92,20 +93,24 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Writing to sheet
-        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
+        self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
         
         # Load predefined formats
-        chart = self._create_base_chart('line')
+        legend = True
+        if data_df.shape[1] < 3:
+            legend = False
+        chart = self._create_base_chart('line', "", legend)
 
         # Override base chart configurations if specified
         if "size" in configs:
             chart.set_size(configs["size"])
-        if "legend" in configs:
-            chart.set_legend(configs["legend"])
+        # if "legend" in configs:
+        #     chart.set_legend(configs["legend"])
         if "plotarea" in configs:
             chart.set_plotarea(configs["plotarea"])
     
@@ -154,13 +159,13 @@ class ExcelAutoChart:
             **self.format.charts['basic']["y_axis"],
             **configs.get('y_axis', {}),
             'name': axis_title,
-            'num_format': '0%' if num_format=='0.0%' else num_format,
+            'num_format': '0' if numeric_type in ('decimal_1', 'decimal_2') else num_format,
         })
         
         chart.set_x_axis({
             **self.format.charts['basic']["x_axis"],
             **configs.get('x_axis', {}),
-            'num_format': '0',
+            'num_format': '0' if not isinstance(data_df.iloc[1,0], pd.Timestamp) else 'mmm-yy',
         })
 
         # Insert chart with proper positioning
@@ -216,7 +221,8 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
+        self.sheet_list.append(sheet_name)
         
         # Raising errors
         if data_df.empty:
@@ -332,8 +338,9 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        data_df, worksheet = self.writer._write_from_df(self.df_list[index], sheet_name, num_format, "database")
-        
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
+        self.sheet_list.append(sheet_name)
+
         # Raising errors
         if data_df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
@@ -442,12 +449,8 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer._write_from_df(
-            df = self.df_list[index],
-            sheet_name = sheet_name,
-            num_format = num_format,
-            format_template = chart_template
-        )
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template)
+        self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -460,5 +463,5 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet
 
-    def save_workbook(self, output_name: str = "Excel_chart"):
+    def save_workbook(self):
         self.writer.save_workbook()

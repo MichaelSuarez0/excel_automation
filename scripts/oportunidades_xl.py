@@ -186,6 +186,6 @@ if __name__ == "__main__":
     #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl()
-    #reforzamiento_programas_sociales_xl() # Para probar
-    uso_tecnologia_educacion_xl()
+    reforzamiento_programas_sociales_xl() # Para probar
+    #uso_tecnologia_educacion_xl() # También para probar
     
