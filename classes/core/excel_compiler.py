@@ -1,11 +1,10 @@
-import win32com
 import win32com.client as win32
+import xlwings as xw
+from xlwings import Sheet
 import re
 import os
-import time
 import logging
 from excel_automation.classes.utils.colors import Color
-from win32com.client import constants
 from pandas import DataFrame
 
 # Set up basic configuration for logging
@@ -17,7 +16,7 @@ script_dir = os.path.abspath(os.path.dirname(__file__))
 
 # TODO: Change sheet_name with sheet
 class ExcelCompiler:
-    def __init__(self, open_new = True, visible= True, reading_folder: str = "oportunidades"):
+    def __init__(self, visible= True, reading_folder: str = "oportunidades"):
         """
         A class to manage and compile Excel workbooks using the Windows COM interface.
 
@@ -33,39 +32,33 @@ class ExcelCompiler:
         reading_folder : str, optional
             Name of the subfolder within 'products' where input files are located (default is "oportunidades").
         """
-        self.excel_app = win32.Dispatch('Excel.Application')
-        self.excel_app.Visible = visible
-        self.output_name: str = None
-        self.output_folder: str = None
+        self.app = xw.App(visible=visible)
         self.reading_path: str = os.path.join(script_dir, "..", "..", "products", reading_folder)
         self.output_path = os.path.join(script_dir, "..", "..", "products", "otros")
-        self.nwb = None
-        if open_new:
-            self.nwb = self._open_new_workbook()
+        self.nwb = self.app.books[0]
+        # if open_new:
+        #     self.nwb = self._open_new_workbook()
 
     def set_reading_path(self, folder: str = "databases", subfolder: str = "otros"):
         self.reading_path = os.path.join(script_dir, "..", "..", folder, subfolder)
 
-    def set_visibility(self, visible=False):
-        self.excel_app.Visible = visible
-
     def read_workbook(self, file_name: str):
-        self.wb = self.excel_app.Workbooks.Open(os.path.join(self.reading_path, f'{file_name}.xlsx'))
+        self.wb = self.app.books.open(os.path.join(self.reading_path, f'{file_name}.xlsx'))
 
     def _open_new_workbook(self):
-        self.nwb = self.excel_app.Workbooks.Add()    
+        self.nwb = self.app.books.add()   
         return self.nwb
 
     @property
     def file_name(self) -> str:
         if self.wb:
-            print(f'Nombre del archivo: {os.path.splitext(self.wb.Name)[0]}')
-            return os.path.splitext(self.wb.Name)[0]
+            #print(f'Nombre del archivo: {os.path.splitext(self.wb.Name)[0]}')
+            return os.path.splitext(self.wb.name)[0]
         return None
 
     @property
     def count_sheets(self) -> int:
-        return self.wb.Sheets.Count
+        return len(self.wb.sheet_names)
 
     # @property
     # def close(self):
@@ -76,46 +69,38 @@ class ExcelCompiler:
     #     self.excel_app.Quit()
     
     @property
-    def sheet_names(self, lower= False) -> list[str]:
-        self._sheet_names = []
-        #print('Sheet names:')
-        for sheet in self.wb.Sheets:
-            name = sheet.Name
-            name.lower if lower else name
-            self._sheet_names.append(name)
-            #print(f'-{name}')
-        return self._sheet_names
+    def sheet_names(self) -> list[str]:
+        return [sheet.name for sheet in self.wb.sheets] 
+        
 
     # TODO: Check if there is an easier way without regex
+    # TODO: Modularize last sheet
     def rename_sheets(self, regex: str = r"^[a-zA-Z]{1,2}(\d{1,2})"):
         """
         Rename sheets based on captured regex in file name. Default regex captures a number with 1 or 2 digits.
         """
         if not regex:
             regex = r"^[a-zA-Z]{1,2}(\d{1,2})"
-        file_name = self.file_name
-        match = re.match(regex, file_name)
+        match = re.match(regex, self.file_name)
         renamed_count = 1
         wb_len = len(self.sheet_names)
 
-        for index, sheet in enumerate(self.wb.Sheets, start=1):
-            if wb_len != index:
+        for idx, sheet in enumerate(self.wb.sheets, start=1):
+            if wb_len != idx:
                 new_name = f'{int(match.group(1))}.{renamed_count}'
             else:
-                new_name = f'{int(match.group(1))}.I'
-            sheet.Name = new_name
+                new_name = f'{int(match.group(1))}.I' # Last sheet
+            sheet.name = new_name
             renamed_count += 1
 
-        # Final save
-        #self.wb.Save()
-    
     # TODO: Aptos Narrow set as default font
     def copy_sheets(self):
         if not self.nwb:
             self._open_new_workbook()
         assert self.nwb
-        for sheet in self.wb.Sheets:
-            sheet.Copy(Before=self.nwb.Sheets(self.nwb.Sheets.Count))  # Copy sheet to new workbook
+        for sheet in self.wb.sheets:
+            sheet: Sheet
+            sheet.api.Copy(Before=self.nwb.sheets[-1].api)  # Copy sheet to new workbook
 
         logging.info("Sheets copied to new workbook")
     
@@ -123,10 +108,10 @@ class ExcelCompiler:
         """Deletes a sheet from the workbook using zero-based indexing."""
         index = index + 1 
         if self.wb and 1 <= index <= self.wb.Sheets.Count:
-            self.excel_app.DisplayAlerts = False
+            self.app.DisplayAlerts = False
             self.wb.Sheets(index).Delete()
             logging.info(f"Sheet at index {index} deleted from workbook")
-            self.excel_app.DisplayAlerts = True
+            self.app.DisplayAlerts = True
         else:
             logging.warning(f"Invalid index {index}. Workbook has {self.wb.Sheets.Count} sheets.")
 
@@ -176,6 +161,11 @@ class ExcelCompiler:
     #     final_path = os.path.join(save_dir, "Informe_Entregables_VF_prueba_final.xlsx")
     #     self.nwb.SaveAs(final_path)
     #     print(f"Las hojas han sido copiadas y guardadas correctamente en: {final_path}")
+    def close_app(self):
+        """
+        Close the app without saving changes.
+        """
+        self.app.quit()
 
     def close_workbook(self):
         """
