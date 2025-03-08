@@ -4,8 +4,48 @@ from icecream import ic
 import pprint
 from functools import wraps
 import os
+from string import Template
+import pandas as pd
 
 folder_name = "oportunidades"
+departamentos_codigos = {
+    "Amazonas": "ama",
+    "Áncash": "an",
+    "Apurímac": "apu",
+    "Arequipa": "are",
+    "Ayacucho": "aya",
+    "Cajamarca": "caj",
+    "Callao": "callao",
+    "Cusco": "cus",
+    "Huancavelica": "hcv",
+    "Huánuco": "hnc",
+    "Ica": "ica",
+    "Junín": "jun",
+    "La Libertad": "lali",
+    "Lambayeque": "lamb",
+    "Lima Metropolitana": "lmt",
+    "Lima Region": "lim",
+    "Loreto": "lore",
+    "Madre de Dios": "madre",
+    "Moquegua": "moq",
+    "Pasco": "pas",
+    "Piura": "piu",
+    "Puno": "pun",
+    "San Martín": "smt",
+    "Tacna": "tac",
+    "Tumbes": "tum",
+    "Ucayali": "uca"
+}
+
+
+def sustituir_departamento(text, departamento):
+    text_template = Template(text)
+    return text_template.substitute(Departamento=departamento)
+
+def convert_index_info(df: pd.DataFrame, departamento) -> pd.DataFrame:
+    df = df[['Nombre', 'Título', 'Fuente', 'Formato número']].copy()
+    df['Título'] = df['Título'].apply(lambda x: sustituir_departamento(x, departamento))
+    return df
 
 
 # TODO: Corregir, esta función es antigua
@@ -182,10 +222,59 @@ def uso_tecnologia_educacion_xl():
         chart_creator.save_workbook()
 
 
+def aprovechamiento_ruta_seda():
+    # Variables
+    # Falta Callao
+    # Apurímac no produce plomo, desde enero 16 solo cobre
+    # Moquegua no produce plomo
+    # Falta Lambayeque (no produce ninguno)
+    # Falta Piura (no produce ninguno)
+    # Falta San Martín (no produce ninguno)
+    # Falta La Libertad (no produce ninguno)
+    # Falta Loreto (no produce ninguno)
+    departamentos = ["Lima", "Arequipa", "Apurímac", "Moquegua", "Junín", "Cajamarca", "Ica"]
+    file_name_base = "o2_{} - Aprovechamiento de la franja y ruta de la seda"
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - Aprovechamiento de la franja y ruta de la seda", "oportunidades")
+    dfs = excel.worksheets_to_dataframes(True)
+
+    for dpto in departamentos:
+        df_list = dfs.copy()    
+        file_name = file_name_base.format(departamentos_codigos.get(dpto, dpto[:3].lower()))
+        plomo = True
+
+        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[1] = df_list[1].iloc[:-2,:]
+        df_list[2] = excel.filter_data(df_list[2], dpto, key="column")
+        df_list[3] = df_list[3].fillna(0)
+        try:
+            df_list[3] = excel.filter_data(df_list[3], dpto)
+        except KeyError as e:
+            df_list[0] = df_list[0].drop(index=2)
+            plomo = False
+            pass
+
+        ic(df_list[3])
+        # # Charts
+        chart_creator = ExcelAutoChart(df_list, file_name, os.path.join("oportunidades", "aprovechamiento_ruta_seda"))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_table(index=1, sheet_name="Tab1", numeric_type="decimal_1", chart_template='data_table')
+        chart_creator.create_line_chart(index=2, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_monthly")
+        if plomo:
+            chart_creator.create_line_chart(index=3, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_monthly")
+        chart_creator.create_table(index=4, sheet_name="Tab2")
+        chart_creator.save_workbook()
+
+    return excel, chart_creator, departamentos
+
+
 if __name__ == "__main__":
     #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl()
-    reforzamiento_programas_sociales_xl() # Para probar
+    #reforzamiento_programas_sociales_xl() # Para probar
     #uso_tecnologia_educacion_xl() # También para probar
+    aprovechamiento_ruta_seda()
+    
     
