@@ -1,3 +1,4 @@
+from email.errors import InvalidBase64PaddingDefect
 import os
 from tracemalloc import start
 from excel_automation.classes.core.excel_compiler import ExcelCompiler
@@ -41,25 +42,6 @@ def create_report(file_list: list) -> None:
     excel_app.save_new_workbook("Reporte Lima")
 
 # TODO: Set zoom 90% for all sheets after copying
-# def create_carlomar_report(file_list: list) -> None:
-#     table = defaultdict(list)
-#     for file_full_name in file_list[:2]:
-#         number = extract_number(file_full_name)
-#         file_name = extract_file_name(file_full_name)
-#         table["N°"].append(number)
-#         table["Oportunidad"].append(file_name)
-
-#         excel_app.read_workbook(file_full_name)
-#         excel_app.rename_sheets()
-#         excel_app.add_rows_to_all_sheets(3)
-#         excel_app.write_to_cell_all_sheets(1, 1, f"Oportunidad {number}. {file_name}")
-#         excel_app.freeze_top_row_all_sheets()
-
-#         excel_app.copy_sheets()
-#         excel_app.close_workbook()
-#     df = pd.DataFrame(table)
-#     excel_app.write_table("0", df)
-#     excel_app.save_new_workbook("Reporte Lima - Carlomar")
 
 # TODO: Casillas de Fuente 1, Fuente 2
 # TODO: Mover fuente dependiendo de la longitud del enlace
@@ -104,24 +86,22 @@ def create_carlomar_report(file_list: list[str], df_list: list[pd.DataFrame]) ->
 
 if __name__ == "__main__":
     # Initialize the ExcelCompiler and FileManager classes
-    excel_app = ExcelCompiler(open_new=True)
-    file_manager = FileManager(excel_app.reading_path)
-    custom_path = os.path.join("products", "oportunidades")
+    excel_app = ExcelCompiler()
+    # file_manager = FileManager(excel_app.reading_path)
+    # custom_path = os.path.join("products", "oportunidades")
 
-    # Obtain file_list
-    file_list = file_manager.list_files(with_extension=False)
-    file_list = FileManager.sort_files_by_number(file_list)
-    index_list = []
+    # # Obtain file_list
+    # file_list = file_manager.list_files(with_extension=False)
+    # file_list = FileManager.sort_files_by_number(file_list)
+    # index_list = []
 
-    # Obtain index_list
-    for file_name in file_list:
-        excel_extractor = ExcelDataExtractor(file_name, custom_path=custom_path)
-        df = excel_extractor.worksheet_to_dataframe(0)
-        index_list.append(df)
+    # # Obtain index_list
+    # for file_name in file_list:
+    #     excel_extractor = ExcelDataExtractor(file_name, custom_path=custom_path)
+    #     df = excel_extractor.worksheet_to_dataframe(0)
+    #     index_list.append(df)
 
-    create_carlomar_report(file_list, index_list)
+    # create_carlomar_report(file_list, index_list)
 
-
-    # #create_report(file_list)
-    # create_carlomar_report(file_list)
+    
     

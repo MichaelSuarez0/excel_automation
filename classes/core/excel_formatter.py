@@ -90,8 +90,8 @@ class ExcelFormatter:
         """Applies formatting only to cells with data."""
 
         ### Widths and heights
-        worksheet.set_column('A:A', 26)
-        worksheet.set_column('B:B', 54)
+        worksheet.set_column('A:A', 27)
+        worksheet.set_column('B:B', 57)
         worksheet.set_row(0, 20)
 
         ### Basic configurations

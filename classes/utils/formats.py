@@ -382,7 +382,13 @@ class ChartFormats:
                 'line': {'width': 1.75},
                 'marker': {'none': True},
                 'data_labels': {'value': False}
+            },
+           'x_axis': {
+                'major_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT.value}
                 }
+            }
             }
         
 
@@ -479,7 +485,7 @@ class ChartFormats:
                     }
             }
         }
-    
+    # Y max should be 100
     def _column_stacked(self):
         return {
             'colors': self._column_percent_stacked_colors,
