@@ -58,7 +58,15 @@ class ExcelCompiler:
 
     @property
     def count_sheets(self) -> int:
+<<<<<<< Updated upstream
         return len(self.wb.sheet_names)
+=======
+<<<<<<< Updated upstream
+        return self.wb.Sheets.Count
+=======
+        return self.wb.sheets.count
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
 
     # @property
     # def close(self):
@@ -85,8 +93,19 @@ class ExcelCompiler:
         renamed_count = 1
         wb_len = len(self.sheet_names)
 
+<<<<<<< Updated upstream
         for idx, sheet in enumerate(self.wb.sheets, start=1):
             if wb_len != idx:
+=======
+<<<<<<< Updated upstream
+        for index, sheet in enumerate(self.wb.Sheets, start=1):
+            if wb_len != index:
+=======
+        for idx, sheet in enumerate(self.wb.sheets, start=1):
+            sheet: Sheet
+            if wb_len != idx:
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
                 new_name = f'{int(match.group(1))}.{renamed_count}'
             else:
                 new_name = f'{int(match.group(1))}.I' # Last sheet
@@ -106,17 +125,28 @@ class ExcelCompiler:
     
     def delete_sheet(self, index: int):
         """Deletes a sheet from the workbook using zero-based indexing."""
+<<<<<<< Updated upstream
         index = index + 1 
         if self.wb and 1 <= index <= self.wb.Sheets.Count:
             self.app.DisplayAlerts = False
             self.wb.Sheets(index).Delete()
             logging.info(f"Sheet at index {index} deleted from workbook")
+<<<<<<< Updated upstream
             self.app.DisplayAlerts = True
+=======
+            self.excel_app.DisplayAlerts = True
+=======
+        if self.wb and 0 <= index <= self.count_sheets:
+            self.app.display_alerts = False
+            self.wb.sheets[index].delete()
+            logging.info(f"Sheet at index {index} deleted from workbook")
+            self.app.display_alerts = True
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
         else:
-            logging.warning(f"Invalid index {index}. Workbook has {self.wb.Sheets.Count} sheets.")
+            logging.warning(f"Invalid index {index}. Workbook has {self.wb.sheets.count} sheets.")
 
 
-    
     # def order_sheets(self, pattern: str, save_dir: str):
     #     if self._sheet_names is None:
     #         _ = self.sheet_names  # Forzar cálculo de nombres de hojas
@@ -174,26 +204,39 @@ class ExcelCompiler:
         self.wb.Close(SaveChanges=False)
         logging.info("Workbook closed without saving.")
 
-    def add_rows(self, sheet_name: str, num_rows: int, height: float = 15.00):
-        sheet = self.wb.Sheets(sheet_name)
-        for _ in range(num_rows):
-            sheet.Rows(1).Insert(Shift=1)  # Shift existing rows down
-            sheet.Rows(1).RowHeight = height  
+    def _get_sheet(self, sheet: int | str) -> Sheet:
+        if isinstance(sheet, int):
+            if not 0 <= sheet <= self.count_sheets:
+                raise ValueError(f"Invalid sheet index {sheet}. Workbook has {len(self.count_sheets)} sheets.")
+            return self.wb.sheets[sheet]
+        elif isinstance(sheet, str):
+            return self.wb.sheets[sheet]
+        else:
+            raise TypeError("Sheet parameter must be a string (name) or an integer (index).")
 
-    def add_columns(self, sheet_name: str, num_columns: int, width: float = 8.43):
-        sheet = self.wb.Sheets(sheet_name)
-        for _ in range(num_columns):
-            sheet.Columns(1).Insert(Shift=0)
-            sheet.Columns(1).ColumnWidth = width
+    def add_rows(self, sheet: str | int, num_rows: int, height: float = 15.00):
+        ws = self._get_sheet(sheet)
+        
+        for _ in range(num_rows):
+            ws.range("1:1").api.Insert(Shift=-4121)  # Using xlShiftDown (-4121) is more explicit
+            ws.range("1:1").row_height = height
+
+    def add_columns(self, sheet: str | int, num_columns: int, width: float = 8.43):
+        ws = self._get_sheet(sheet)
+
+        ws.range(f"A:{chr(64 + num_columns)}").api.Insert(Shift=1)  # Shift existing columns to the right
+        ws.range(f"A:{chr(64 + num_columns)}").column_width = width
     
     def add_rows_to_all_sheets(self, num_rows: int, height: float = 15.00):
-        for sheet in self.wb.Sheets:
-            self.add_rows(sheet.Name, num_rows, height)
+        for sheet in self.wb.sheets:
+            sheet: Sheet
+            self.add_rows(sheet.name, num_rows, height)
         logging.info(f"Added {num_rows} rows to all sheets.")
 
     def add_columns_to_all_sheets(self, num_columns: int, width: float = 8.43):
-        for sheet in self.wb.Sheets:
-            self.add_columns(sheet.Name, num_columns, width)
+        for sheet in self.wb.sheets:
+            sheet: Sheet
+            self.add_columns(sheet.name, num_columns, width)
         logging.info(f"Added {num_columns} columns to all sheets.")
     
     def freeze_top_row(self, sheet_name: str):
