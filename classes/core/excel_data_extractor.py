@@ -3,7 +3,7 @@ import pandas as pd
 import openpyxl
 from icecream import ic
 import pandas as pd
-from typing import Optional
+from typing import Literal, Optional
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -106,7 +106,7 @@ class ExcelDataExtractor():
         df = pd.read_excel(self.file_path, sheet_name=sheet_name)
         return self._preprocess_dataframe(df)
 
-    def worksheets_to_dataframes(self, include_first: bool = False) -> list[pd.DataFrame]:
+    def worksheets_to_dataframes(self, include_first: bool = True) -> list[pd.DataFrame]:
         """
         Reads all worksheets at once and returns a list of cleaned DataFrames.
         
@@ -164,43 +164,68 @@ class ExcelDataExtractor():
     def filter_data(
         self,
         df: pd.DataFrame,
-        selected_categories: Optional[list[str]] = None,
-        filter_out: Optional[list[str]] = None
+        selected_categories: Optional[list[str]],
+        filter_out: bool = False,
+        key: Literal["row", "column"] = "column"
     ) -> pd.DataFrame:
         """
-        Filters the input DataFrame by selecting columns based on the provided categories.
+        Filters the input DataFrame by selecting columns or rows based on the provided categories.
         Should be run AFTER normalizing orientation for all DataFrames.
 
-        This function filters the given DataFrame (`df`) by selecting only columns (containing
-        categories like Departamento) that match the values in `selected_categories`. It
-        ensures no duplicated columns are selected, and always includes the first column of 
-        the DataFrame (typically used as an identifier or key). If no `selected_categories` 
-        are provided, the function returns the original DataFrame without any filtering.
+        This function filters the given DataFrame (`df`) by selecting only columns or rows (containing
+        categories like Departamento) that match the values in `selected_categories`. It ensures no 
+        duplicated columns or rows are selected, and always includes the first column of the DataFrame 
+        (typically used as an identifier or key). If no `selected_categories` are provided, the function 
+        returns the original DataFrame without any filtering. If no columns or rows match `selected_categories`, 
+        a `KeyError` will be raised.
 
         Parameters:
         ----------
         df : pd.DataFrame
             The DataFrame to be filtered.
         selected_categories : list[str], optional
-            A list of column names to be included in the filtered DataFrame. If `None`, 
+            A list of column names or row values to be included in the filtered DataFrame. If `None`, 
             no filtering is applied, and the original DataFrame is returned.
+        filter_out : bool, optional, default=False
+            If `True`, it excludes the columns or rows in `selected_categories`. If `False`, only those 
+            columns or rows matching `selected_categories` are selected.
+        key : {"row", "column"}, optional, default="column"
+            The axis to filter along. If "column", filters the columns; if "row", filters the rows based 
+            on the values in the first column.
 
         Returns:
         -------
         pd.DataFrame
-            A DataFrame containing only the selected columns, including the first column.
-        
+            A DataFrame containing only the selected columns or rows, including the first column.
+
+        Raises:
+        -------
+        KeyError
+            If no columns or rows match the `selected_categories`.
+
         Example:
         --------
-        # Sample usage:
-        df = pd.DataFrame({
-            'Departamento': ['Lima', 'Arequipa', 'Cusco'],
-            '2014': [10, 20, 30],
-            '2015': [11, 21, 31]
-        })
+        Example DataFrame:
 
+            Departamento  2014  2015
+        0         Lima    10    11
+        1     Arequipa    20    21
+        2        Cusco    30    31
+
+        selected_categories = ['2014']
+        filtered_df = filter_data(df, selected_categories, key="column")
+        print(filtered_df)
+
+        Output:
+        --------
+            Departamento  2014
+        0         Lima    10
+        1     Arequipa    20
+        2        Cusco    30
+
+        # Example for filtering rows:
         selected_categories = ['Lima']
-        filtered_df = filter_data(df, selected_categories)
+        filtered_df = filter_data(df, selected_categories, key="row")
         print(filtered_df)
 
         Output:
@@ -209,23 +234,24 @@ class ExcelDataExtractor():
         0   Lima        10  11
 
         """
-        if selected_categories:
-            cols = [df.columns[0]] # Labels are in Row 1
+        if key == "column":
+            cols = [df.columns[0]] # Labels are in Row 1 (headers)
             
-            # Loop through the remaining columns and add them if they are in selected_labels
-            for col in df.columns[1:]:
-                if col in selected_categories and col not in cols:  # Asegúrate de no añadir duplicados
-                    cols.append(col)
+            # Loop through the remaining columns and add them if they are in selected_labels and not filter_out
+            cols += [col for col in df.columns[1:] if (col in selected_categories) != filter_out]
             filtered_df = df[cols]
+            if filtered_df.shape[1] == 1:
+                raise KeyError(f"No columns in {selected_categories} matched.")
+
             
-        if filter_out:
-            cols = [df.columns[0]] # Labels are in Row 1
-            
-            # Loop through the remaining columns and add them if they are in selected_labels
-            for col in df.columns[1:]:
-                if col not in filter_out and col not in cols:  # Asegúrate de no añadir duplicados
-                    cols.append(col)
-            filtered_df = df[cols]
+        elif key == "row":
+            condition = df.iloc[:, 0].isin(selected_categories)
+            filtered_df = df[~condition] if filter_out else df[condition]
+            if filtered_df.empty:
+                raise KeyError(f"No rows in {selected_categories} matched.")
+
+        else:
+            raise ValueError("Must select either 'column' or 'row' as key")
 
         return filtered_df
 
@@ -401,7 +427,6 @@ class ExcelDataExtractor():
             for df, sheet_name in zip(dfs, sheet_names):
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
    
-    # TODO: All that is missing is FUENTE and URL
     # TODO: Use sheet index instead of name
 
 
