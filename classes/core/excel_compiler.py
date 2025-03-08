@@ -59,6 +59,7 @@ class ExcelCompiler:
     @property
     def count_sheets(self) -> int:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         return len(self.wb.sheet_names)
 =======
 <<<<<<< Updated upstream
@@ -66,6 +67,9 @@ class ExcelCompiler:
 =======
         return self.wb.sheets.count
 >>>>>>> Stashed changes
+>>>>>>> Stashed changes
+=======
+        return self.wb.sheets.count
 >>>>>>> Stashed changes
 
     # @property
@@ -95,6 +99,7 @@ class ExcelCompiler:
 
 <<<<<<< Updated upstream
         for idx, sheet in enumerate(self.wb.sheets, start=1):
+            sheet: Sheet
             if wb_len != idx:
 =======
 <<<<<<< Updated upstream
@@ -126,6 +131,7 @@ class ExcelCompiler:
     def delete_sheet(self, index: int):
         """Deletes a sheet from the workbook using zero-based indexing."""
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         index = index + 1 
         if self.wb and 1 <= index <= self.wb.Sheets.Count:
             self.app.DisplayAlerts = False
@@ -142,6 +148,13 @@ class ExcelCompiler:
             logging.info(f"Sheet at index {index} deleted from workbook")
             self.app.display_alerts = True
 >>>>>>> Stashed changes
+>>>>>>> Stashed changes
+=======
+        if self.wb and 0 <= index <= self.count_sheets:
+            self.app.display_alerts = False
+            self.wb.sheets[index].delete()
+            logging.info(f"Sheet at index {index} deleted from workbook")
+            self.app.display_alerts = True
 >>>>>>> Stashed changes
         else:
             logging.warning(f"Invalid index {index}. Workbook has {self.wb.sheets.count} sheets.")
