@@ -60,9 +60,12 @@ class ExcelCompiler:
     def count_sheets(self) -> int:
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         return len(self.wb.sheet_names)
 =======
 <<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         return self.wb.Sheets.Count
@@ -70,6 +73,9 @@ class ExcelCompiler:
         return self.wb.sheets.count
 >>>>>>> Stashed changes
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -101,10 +107,13 @@ class ExcelCompiler:
 
 <<<<<<< Updated upstream
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         for idx, sheet in enumerate(self.wb.sheets, start=1):
             if wb_len != idx:
 =======
 <<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
         for index, sheet in enumerate(self.wb.Sheets, start=1):
@@ -115,6 +124,9 @@ class ExcelCompiler:
             if wb_len != idx:
 >>>>>>> Stashed changes
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
@@ -155,6 +167,9 @@ class ExcelCompiler:
             self.app.display_alerts = True
 >>>>>>> Stashed changes
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 =======
 >>>>>>> Stashed changes
