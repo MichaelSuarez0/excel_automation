@@ -59,13 +59,19 @@ class ExcelCompiler:
     @property
     def count_sheets(self) -> int:
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         return len(self.wb.sheet_names)
 =======
 <<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
         return self.wb.Sheets.Count
 =======
         return self.wb.sheets.count
 >>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
 
     # @property
@@ -94,10 +100,13 @@ class ExcelCompiler:
         wb_len = len(self.sheet_names)
 
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
         for idx, sheet in enumerate(self.wb.sheets, start=1):
             if wb_len != idx:
 =======
 <<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
         for index, sheet in enumerate(self.wb.Sheets, start=1):
             if wb_len != index:
 =======
@@ -105,6 +114,9 @@ class ExcelCompiler:
             sheet: Sheet
             if wb_len != idx:
 >>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
                 new_name = f'{int(match.group(1))}.{renamed_count}'
             else:
@@ -142,6 +154,9 @@ class ExcelCompiler:
             logging.info(f"Sheet at index {index} deleted from workbook")
             self.app.display_alerts = True
 >>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
         else:
             logging.warning(f"Invalid index {index}. Workbook has {self.wb.sheets.count} sheets.")
