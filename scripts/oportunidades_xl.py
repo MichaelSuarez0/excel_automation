@@ -106,7 +106,6 @@ def edificaciones_antisismicas_xl():
         chart_creator.create_table(index=2, sheet_name="Tab1")
         chart_creator.save_workbook()
         
-
 def infraestructura_vial_xl():
     # Variables
     departamentos = ["Lima", "Ucayali", "Ayacucho", "Arequipa", "Callao", "Áncash", "Tacna", "Puno",
@@ -115,52 +114,62 @@ def infraestructura_vial_xl():
     years = list(range(2014, 2025)) # No incluye 2025
     years = list(map(lambda x: str(x), years))
     categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
-    source_name= "Oportunidad - Infraestructura vial y ferroviaria"
+    source_name= "Oportunidad - Mejoramiento de la infraestructura vial y ferroviaria"
     file_name_base = "o1_{} Mejoramiento de la infraestructura vial y ferroviaria"
 
     # ETL
     excel = ExcelDataExtractor(source_name, folder_name)
-    dfs = excel.worksheets_to_dataframes(False)
+    dfs = excel.worksheets_to_dataframes()
 
     for departamento in departamentos:
         df_list = dfs.copy()
         dpto= [departamento]
-        file_name = file_name_base.format(departamento[:3].lower())
+        file_name = file_name_base.format(departamentos_codigos.get(departamento, departamento[:3].lower()))
+        df_list[0] = convert_index_info(df_list[0], departamento)
 
-        for id, df in enumerate(df_list[4:], start=4):
+        ## Tab 1
+        for id, df in enumerate(df_list[5:], start=5):
             df = excel.filter_data(df, categorias2)
             df = excel.normalize_orientation(df)
             df = excel.filter_data(df, dpto)
             df_list[id] = df
-        df_list[4] = excel.concat_multiple_dataframes(df_list[4:], df_names=years)
-        df_list[0] = excel.normalize_orientation(df_list[0])
-        df_list[1] = excel.normalize_orientation(df_list[1])
-        df_list[0] = excel.filter_data(df_list[0], dpto)
-        df_list[1] = excel.filter_data(df_list[1], dpto)
-        df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "2014", "2024")
-        df_list[0] = excel.normalize_orientation(df_list[0])
+        df_list[5] = excel.concat_multiple_dataframes(df_list[5:], df_names=years)
 
+        ## Fig 1
+        #df_list[1:3] = excel.normalize_orientation(df_list[1:3])
+        df_list[1] = excel.filter_data(df_list[1], dpto, key="row")
+        df_list[2] = excel.filter_data(df_list[2], dpto, key="row")
+        df_list[1:3] = excel.normalize_orientation(df_list[1:3])
+        df_list[1] = excel.concat_dataframes(df_list[1], df_list[2], "2014", "2024")
+        df_list[1:3] = excel.normalize_orientation(df_list[1:3])
         # Calcular el porcentaje de pavimentación para cada tipo de vía
         try:
-            df_list[0]['Vecinal'] = (df_list[0]['Vecinal Pavimentada'] / df_list[0]['Vecinal Total'])
+            df_list[1]['Vecinal'] = (df_list[1]['Vecinal Pavimentada'] / df_list[1]['Vecinal Total'])
         except ZeroDivisionError:
-            df_list[0]['Vecinal'] = 0
-        df_list[0]['Departamental'] = (df_list[0]['Departamental Pavimentada'] / df_list[0]['Departamental Total'])
-        df_list[0]['Nacional'] = (df_list[0]['Nacional Pavimentada'] / df_list[0]['Nacional Total']) 
-        df_list[0] = excel.filter_data(df_list[0], categorias)
-        df_list[0] = excel.normalize_orientation(dfs=df_list[0])
+            df_list[1]['Vecinal'] = 1
+        df_list[1]['Departamental'] = (df_list[1]['Departamental Pavimentada'] / df_list[1]['Departamental Total'])
+        df_list[1]['Nacional'] = (df_list[1]['Nacional Pavimentada'] / df_list[1]['Nacional Total']) 
+        df_list[1] = excel.filter_data(df_list[1], categorias)
+        df_list[1] = excel.normalize_orientation(dfs=df_list[1])
+    
 
+        ## Fig 2
+        df_list[3] = df_list[3].groupby("DEPARTAMENTO", as_index= False)["LONGITUD"].sum()
+        df_list[3].columns = ["Departamento", "Longitud (km)"]
+        df_list[3] = df_list[3].sort_values(by = "Longitud (km)", ascending= True)
         # Calcular variación en la construcción de filas
         try:
-            df_list[4]['Var %'] = ((df_list[4]['2024'] - df_list[4]['2015']) / df_list[4]['2015']) *100
+            df_list[5]['Var %'] = ((df_list[5]['2024'] - df_list[5]['2015']) / df_list[5]['2015'])
         except ZeroDivisionError:
-            df_list[4]['Var %'] = 0
+            df_list[5]['Var %'] = 0
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "infraestructura_vial_ferroviaria"))
-        chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
-        chart_creator.create_bar_chart(index=0, sheet_name="Fig1", grouping="standard", numeric_type="percentage", chart_template="bar")
-        chart_creator.create_table(index=3, sheet_name="Tab2")
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_table(index=5, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", grouping="standard", numeric_type="percentage", chart_template="bar")
+        chart_creator.create_bar_chart(index=3, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", chart_template="bar_single", highlighted_category=departamento)
+        chart_creator.create_table(index=4, sheet_name="Tab2")
         chart_creator.save_workbook()
 
 
@@ -269,12 +278,49 @@ def aprovechamiento_ruta_seda():
     return excel, chart_creator, departamentos
 
 
+
+# TODO: Verificar por qué Total aparece primero
+def uso_masivo_telecomunicaciones_xl():
+    # Variables
+    # Falta Lima metropolitana
+    #departamentos = ["Lima Region", "Callao", "Áncash", "Pasco", "Junín", "Ayacucho", "Cusco"]
+    departamentos = ["Junín"]
+
+    años = list(range(2012, 2023, 2)) + [2023]
+    file_name_base = "o7_{} - Uso masivo de las telecomunicaciones e internet"
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - Uso masivo de las telecomunicaciones e internet", "oportunidades")
+    dfs = excel.worksheets_to_dataframes()
+
+    for departamento in departamentos:
+        file_name = file_name_base.format(departamentos_codigos.get(departamento, departamento[:3].lower()))
+        df_list = dfs.copy()
+        
+        df_list[0] = convert_index_info(df_list[0], departamento)
+        df_list[3] = excel.normalize_orientation(df_list[3])
+        df_list[3] = excel.filter_data(df_list[3], [departamento, "Total"])
+        df_list[4] = excel.filter_data(df_list[4], años)
+
+        # Charts
+        chart_creator = ExcelAutoChart(df_list, f"{file_name}", os.path.join(folder_name, "uso_masivo_telecomunicaciones"))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_single")
+        chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="percentStacked", numeric_type="percentage", chart_template="column_stacked")
+        chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="decimal_1", chart_template="line_simple")
+        chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table")
+        chart_creator.create_table(index=5, sheet_name="Tab2", chart_template="text_table")
+        
+        chart_creator.save_workbook()
+
+# TODO: Un logging para cada save
 if __name__ == "__main__":
     #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl()
     #reforzamiento_programas_sociales_xl() # Para probar
     #uso_tecnologia_educacion_xl() # También para probar
-    aprovechamiento_ruta_seda()
+    #aprovechamiento_ruta_seda()
+    uso_masivo_telecomunicaciones_xl()
     
     
