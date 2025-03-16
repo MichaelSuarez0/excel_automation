@@ -1,7 +1,8 @@
 from enum import Enum
 
+# TODO: DIFFERENT GRAY FOR BORDERS AND GRIDLINES
 #TODO: Un poco más azul el blue_dark
-class Color(Enum):
+class Color(str, Enum):
     RED: str = "#be0000"
     RED_LIGHT: str = "#FFABAB"
     BLUE_LIGHT: str = "#A6CAEC"
@@ -16,6 +17,9 @@ class Color(Enum):
     PURPLE: str = "#7030A0"
     BLACK: str = "#000000"
 
+    def __str__(self):
+        return self.value 
+
     @property
     def no_hash(self):
         return self.value.lstrip("#")
@@ -26,7 +30,7 @@ class Color(Enum):
         return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
     @property
-    def win32(self):
+    def bgr(self):
         # Remove the '#' if present
         hex_color = self.value.lstrip('#')
         # Convert the hex values to integers
