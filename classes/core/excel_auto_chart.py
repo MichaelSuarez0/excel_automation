@@ -35,7 +35,6 @@ class ExcelAutoChart:
         self.sheet_count = 0
         self.sheet_list = []
         
-    # TODO: Add in formats
     # TODO: Consider discussing chart font being Aptos Narrow
     def _create_base_chart(self, chart_type: str, chart_subtype: str = ""):
         """Default settings for all chart types"""
@@ -48,10 +47,19 @@ class ExcelAutoChart:
         chart.set_legend(configs["legend"])
 
         return chart
+    
+    def _configure_axis(self, num_format: str):
+        # Axis configuration
+        if num_format in ('0.0', '0.00'):
+            axis_type = '0'
+        elif num_format in ('0.0%'):
+            axis_type = '0%'
+        else:
+            axis_type = num_format
+        return axis_type
  
-    # TODO: cycle through colors with itertools.cycle
-    # TODO: Data labels position
-    # TODO: Implement manual logic for specific series (i.e. Peru series) if column.name == Peru
+    # TODO: Data labels position (automatically?)
+    # TODO: Implement manual logic for specific series (i.e. Peru series solid) if column.name == Peru
     def create_line_chart(
         self,
         index: int = 0,
@@ -92,7 +100,7 @@ class ExcelAutoChart:
         """
         # Initialize configurations
         configs = self.format.charts[chart_template]
-        color_cycle = cycle(configs['colors']) 
+        color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
         num_format = self.format.numeric_types[numeric_type]
         
         # Writing to sheet
@@ -113,8 +121,8 @@ class ExcelAutoChart:
             plot_area["layout"]["height"] += 0.10
         
         if axis_title:
-            plot_area["layout"]["x"] += 0.04
-            plot_area["layout"]["width"] -= 0.04
+            plot_area["layout"]["x"] += 0.03
+            plot_area["layout"]["width"] -= 0.03
 
         # Override base chart configurations
         chart.set_plotarea(plot_area)
@@ -150,8 +158,11 @@ class ExcelAutoChart:
                     'value': configs['series']['data_labels'].get('value', True),
                     'position': configs['series']['data_labels'].get('position', True),
                     'num_format': num_format,
-                    'fill': {'color': Color.WHITE if not chart_template == "line_single" else Color.BLUE_LIGHT},
-                    'font':{'color': configs['series']['data_labels'].get('font', {}).get('color', current_color)},
+                    'fill': {'color': Color.BLUE_LIGHT,
+                             'transparency': 100 if chart_template != "line_single" else 0},
+                    'font':{'color': configs['series']['data_labels'].get('font', {}).get('color', current_color),
+                            'size': configs['series']['data_labels'].get('font', {}).get('size', 10),
+                            'bold': configs['series']['data_labels'].get('font', {}).get('bold', False)},
                     # **({'border': {
                     #         'width': configs['series']['data_labels']['border'].get('width', 1),  
                     #         'color': current_color
@@ -163,11 +174,13 @@ class ExcelAutoChart:
             chart.add_series(series_params)
 
         # Axis configuration
+        axis_format = self._configure_axis(num_format)
+
         chart.set_y_axis({
             **self.format.charts['basic']["y_axis"],
             **configs.get('y_axis', {}),
             'name': axis_title,
-            'num_format': '0' if numeric_type in ('decimal_1', 'decimal_2') else num_format,
+            'num_format': axis_format
         })
         
         chart.set_x_axis({
@@ -257,8 +270,8 @@ class ExcelAutoChart:
             plot_area["layout"]["height"] += 0.10
         
         if axis_title:
-            plot_area["layout"]["x"] += 0.04
-            plot_area["layout"]["width"] -= 0.04
+            plot_area["layout"]["x"] += 0.03
+            plot_area["layout"]["width"] -= 0.03
 
         # Override base chart configurations
         chart.set_plotarea(plot_area)
@@ -290,12 +303,14 @@ class ExcelAutoChart:
             }
             chart.add_series(series_params)
 
-        # Configure axes
+        # Axis configuration
+        axis_format = self._configure_axis(num_format)
+
         chart.set_y_axis({
             **self.format.charts['basic']["y_axis"],
             **configs.get('y_axis', {}),
             'name': axis_title,
-            'num_format': '0%' if num_format=='0.0%' else num_format,
+            'num_format': axis_format,
             'min': 0,
         })
         chart.set_x_axis({
@@ -312,7 +327,7 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet 
     
-    # TODO: Add axes in formats
+
     def create_bar_chart(
         self,
         index: int,
@@ -384,13 +399,16 @@ class ExcelAutoChart:
 
         # Set legend based on number of columns (series) and modify plotarea
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
+        plot_area["layout"]["x"] += 0.10
+        plot_area["layout"]["width"] -= 0.10
+        plot_area["layout"]["height"] += 0.05
         if df.shape[1] < 3:
             chart.set_legend({'none': True})
             plot_area["layout"]["height"] += 0.10
         
         if axis_title:
-            plot_area["layout"]["x"] += 0.04
-            plot_area["layout"]["width"] -= 0.04
+            plot_area["layout"]["x"] += 0.03
+            plot_area["layout"]["width"] -= 0.03
 
         # Override base chart configurations
         chart.set_plotarea(plot_area)
@@ -424,8 +442,9 @@ class ExcelAutoChart:
             }
             chart.add_series(series_params)
 
-        
         # Configure axes
+        axis_format = self._configure_axis(num_format)
+
         chart.set_x_axis({
             **self.format.charts['basic']["y_axis"], # Inverted
             **configs.get('x_axis', {}),
@@ -434,7 +453,7 @@ class ExcelAutoChart:
         chart.set_y_axis({
             **self.format.charts['basic']["x_axis"], # Inverted
             **configs.get('y_axis', {}),
-            'num_format': '@',
+            'num_format': axis_format,
             })
 
         # Insert chart with proper positioning
@@ -452,6 +471,7 @@ class ExcelAutoChart:
         sheet_name: str,
         chart_template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
+        highlighted_category: str =""
     ) -> Worksheet:
         """
         Generates a table in an Excel worksheet based on a DataFrame from the given list of DataFrames.
@@ -467,6 +487,10 @@ class ExcelAutoChart:
             The type of chart template to apply to the table (default is 'text_table').
         numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
             The numeric format for the values in the table (default is 'decimal_1').
+        highlighted_category : str, optional
+            A category value from the first column that will determine row highlighting.
+            If a row's first column matches this value, the entire row will be formatted
+            with a different color (default is an empty string, meaning no highlighting).
 
         Returns
         -------
@@ -481,7 +505,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template)
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template, highlighted_category)
         self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
