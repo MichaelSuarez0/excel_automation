@@ -1,7 +1,7 @@
+from excel_automation.classes.utils.colors import Color
 from excel_automation.classes.core.excel_data_extractor import ExcelDataExtractor
 from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 from icecream import ic
-import pprint
 from functools import wraps
 import os
 from string import Template
@@ -108,14 +108,15 @@ def edificaciones_antisismicas_xl():
         
 def infraestructura_vial_xl():
     # Variables
-    departamentos = ["Lima", "Ucayali", "Ayacucho", "Arequipa", "Callao", "Áncash", "Tacna", "Puno",
+    # Falta Callao (tiene muchos zeros)
+    departamentos = ["Lima", "Ucayali", "Ayacucho", "Arequipa", "Áncash", "Tacna", "Puno",
                      "Cusco", "Huánuco", "Pasco", "Moquegua", "Huancavelica", "Junín", "Apurímac" ]
     categorias = ["Vecinal", "Departamental", "Nacional"]
     years = list(range(2014, 2025)) # No incluye 2025
     years = list(map(lambda x: str(x), years))
     categorias2 = ["Longitud Total", "Nacional Total", "Departamental Total", "Vecinal Total"]
     source_name= "Oportunidad - Mejoramiento de la infraestructura vial y ferroviaria"
-    file_name_base = "o1_{} Mejoramiento de la infraestructura vial y ferroviaria"
+    file_name_base = "o1_{} Mejoramiento de la infraestructura vial y ferroviaria_copy"
 
     # ETL
     excel = ExcelDataExtractor(source_name, folder_name)
@@ -135,6 +136,9 @@ def infraestructura_vial_xl():
             df_list[id] = df
         df_list[5] = excel.concat_multiple_dataframes(df_list[5:], df_names=years)
 
+        # Calcular variación en la construcción de filas
+        df_list[5]['Var % 24/15'] = ((df_list[5]['2024'] - df_list[5]['2015']) / df_list[5]['2015'])
+
         ## Fig 1
         #df_list[1:3] = excel.normalize_orientation(df_list[1:3])
         df_list[1] = excel.filter_data(df_list[1], dpto, key="row")
@@ -151,17 +155,11 @@ def infraestructura_vial_xl():
         df_list[1]['Nacional'] = (df_list[1]['Nacional Pavimentada'] / df_list[1]['Nacional Total']) 
         df_list[1] = excel.filter_data(df_list[1], categorias)
         df_list[1] = excel.normalize_orientation(dfs=df_list[1])
-    
 
         ## Fig 2
         df_list[3] = df_list[3].groupby("DEPARTAMENTO", as_index= False)["LONGITUD"].sum()
         df_list[3].columns = ["Departamento", "Longitud (km)"]
         df_list[3] = df_list[3].sort_values(by = "Longitud (km)", ascending= True)
-        # Calcular variación en la construcción de filas
-        try:
-            df_list[5]['Var %'] = ((df_list[5]['2024'] - df_list[5]['2015']) / df_list[5]['2015'])
-        except ZeroDivisionError:
-            df_list[5]['Var %'] = 0
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "infraestructura_vial_ferroviaria"))
@@ -178,56 +176,65 @@ def reforzamiento_programas_sociales_xl():
     # Falta Callao porque no tiene registros de Juntos en 2017 ni en 2024; también Lima Metropolitana (se escogió solo Región)
     departamentos = ["Puno", "Huanuco", "Ancash", "Ucayali", 'Ayacucho', 'Huancavelica',
                      'Pasco', 'Cusco', 'Lima', 'Cajamarca', 'Amazonas', 'Tumbes', 'Piura']
-    file_name_base = "o6_{} - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
+    file_name_base = "o99_{} - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
 
     # Global ETL
     excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales", folder_name)
-    dfs = excel.worksheets_to_dataframes(False)
-    dfs = excel.normalize_orientation(dfs)
+    dfs = excel.worksheets_to_dataframes(True)
+    dfs[1:-1] = excel.normalize_orientation(dfs[1:-1])
     for dpto in departamentos:
         df_list = dfs.copy()
         departamentos1 = ["Total", dpto]
         final_file_name = file_name_base.format(dpto[:3].lower())
 
         # ETL
-        df_list[0] = excel.filter_data(df_list[0], departamentos1)
-        df_list[1] = excel.filter_data(df_list[1], dpto)
+        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[1] = excel.filter_data(df_list[1], departamentos1)
         df_list[2] = excel.filter_data(df_list[2], dpto)
-        df_list[1] = excel.concat_dataframes(df_list[1], df_list[2], "Juntos", "Pension 65")
-        df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:] / 10000000 # Para dividir todas las columnas menos la primera entre 10°8
-        df_list[1].iloc[:, 1:] = df_list[1].iloc[:, 1:].round(2)
+        df_list[3] = excel.filter_data(df_list[3], dpto)
+        df_list[2] = excel.concat_dataframes(df_list[2], df_list[3], "Juntos", "Pension 65")
+
+        df_list[2].iloc[:, 1:] = df_list[2].iloc[:, 1:].replace("", 0).astype(float)
+        df_list[2].iloc[:, 1:] = df_list[2].iloc[:, 1:] / 10_000_000
+        df_list[2].iloc[:, 1:] = df_list[2].iloc[:, 1:].round(2)
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, final_file_name, os.path.join(folder_name, "reforzarmiento_programas_sociales"))
-        chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
-        chart_creator.create_column_chart(index=1, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", chart_template="column")
-        chart_creator.create_table(index=3, sheet_name="Tab1")
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
+        chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", chart_template="column", axis_title="Millones de soles")
+        chart_creator.create_table(index=4, sheet_name="Tab1")  # Se incrementa en 1
         chart_creator.save_workbook()
+
 
 
 def uso_tecnologia_educacion_xl():
     # Variables
     # Falta Lima Metropolitana
     departamentos = ["Lima", "Apurimac", "Moquegua", "Tacna", "Ancash", "Arequipa", "La Libertad", "Ica", "Tumbes", "Callao"]
-    file_name_base = "o9_{} - Uso de la tecnologia e innovación"
+    file_name_base = "o99_{} - Uso de la tecnologia e innovación en educación"
+    colors = [Color.BLUE_DARK, Color.RED, Color.GREEN_DARK, Color.ORANGE, Color.PURPLE, Color.BLUE]
 
     # ETL
-    excel = ExcelDataExtractor("Oportunidad - Uso de tecnología e Innovación en educación", folder_name)
-    dfs = excel.worksheets_to_dataframes(False)
-    dfs = excel.normalize_orientation(dfs)
+    excel = ExcelDataExtractor("Oportunidad - Uso de la tecnología e innovación en educación", folder_name)
+    dfs = excel.worksheets_to_dataframes(True)
+    dfs[1] = excel.normalize_orientation(dfs[1])
+    dfs[3] = excel.normalize_orientation(dfs[3])
 
     for dpto in departamentos:
         df_list = dfs.copy()
         file_name = file_name_base.format(dpto[:3].lower())
-        df_list[2] = excel.filter_data(df_list[2], dpto)
-        df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/100_000_000
+        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[3] = excel.filter_data(df_list[3], dpto)
+        df_list[3].iloc[:,1] = df_list[3].iloc[:,1]/100_000_000
 
          # Charts
         chart_creator = ExcelAutoChart(df_list, file_name, os.path.join(folder_name, "uso_tecnologia_educacion"))
-        chart_creator.create_line_chart(index=0, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line", axis_title="Porcentaje (%)")
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig2", numeric_type="decimal_2", chart_template="bar_single", highlighted_category="Peru")  # Cambiar a columna
-        chart_creator.create_column_chart(index=2, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_single")
-        chart_creator.create_table(index=3, sheet_name="Tab1")
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line", axis_title="Porcentaje (%)", custom_colors=colors)
+        chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="decimal_2", chart_template="bar_single", highlighted_category="Peru")  # Cambiar a columna
+        chart_creator.create_column_chart(index=3, sheet_name="Fig3", numeric_type="decimal_2", chart_template="column_single")
+        chart_creator.create_table(index=4, sheet_name="Tab1")
         chart_creator.save_workbook()
 
 
@@ -242,7 +249,7 @@ def aprovechamiento_ruta_seda():
     # Falta La Libertad (no produce ninguno)
     # Falta Loreto (no produce ninguno)
     departamentos = ["Lima", "Arequipa", "Apurímac", "Moquegua", "Junín", "Cajamarca", "Ica"]
-    file_name_base = "o2_{} - Aprovechamiento de la franja y ruta de la seda"
+    file_name_base = "o99_{} - Aprovechamiento de la franja y ruta de la seda"
 
     # ETL
     excel = ExcelDataExtractor(f"Oportunidad - Aprovechamiento de la franja y ruta de la seda", "oportunidades")
@@ -255,6 +262,7 @@ def aprovechamiento_ruta_seda():
 
         df_list[0] = convert_index_info(df_list[0], dpto)
         df_list[1] = df_list[1].iloc[:-2,:]
+        df_list[1] = excel.filter_data(df_list[1], [2016], True, "column")
         df_list[2] = excel.filter_data(df_list[2], dpto, key="column")
         df_list[3] = df_list[3].fillna(0)
         try:
@@ -264,30 +272,26 @@ def aprovechamiento_ruta_seda():
             plomo = False
             pass
 
-        ic(df_list[3])
         # # Charts
         chart_creator = ExcelAutoChart(df_list, file_name, os.path.join("oportunidades", "aprovechamiento_ruta_seda"))
         chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
         chart_creator.create_table(index=1, sheet_name="Tab1", numeric_type="decimal_1", chart_template='data_table')
-        chart_creator.create_line_chart(index=2, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_monthly")
+        chart_creator.create_line_chart(index=2, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_monthly", custom_colors=[Color.ORANGE])
         if plomo:
-            chart_creator.create_line_chart(index=3, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_monthly")
+            chart_creator.create_line_chart(index=3, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_monthly", custom_colors=[Color.GRAY])
         chart_creator.create_table(index=4, sheet_name="Tab2")
         chart_creator.save_workbook()
-
-    return excel, chart_creator, departamentos
-
 
 
 # TODO: Verificar por qué Total aparece primero
 def uso_masivo_telecomunicaciones_xl():
     # Variables
     # Falta Lima metropolitana
-    #departamentos = ["Lima Region", "Callao", "Áncash", "Pasco", "Junín", "Ayacucho", "Cusco"]
-    departamentos = ["Junín"]
+    departamentos = ["Lima Región", "Callao", "Áncash", "Pasco", "Junín", "Ayacucho", "Cusco"]
+    custom_colors = [Color.RED, Color.BLUE]
 
     años = list(range(2012, 2023, 2)) + [2023]
-    file_name_base = "o7_{} - Uso masivo de las telecomunicaciones e internet"
+    file_name_base = "o99_{} - Uso masivo de las telecomunicaciones e internet"
 
     # ETL
     excel = ExcelDataExtractor(f"Oportunidad - Uso masivo de las telecomunicaciones e internet", "oportunidades")
@@ -307,8 +311,8 @@ def uso_masivo_telecomunicaciones_xl():
         chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", chart_template="line_single")
         chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="percentStacked", numeric_type="percentage", chart_template="column_stacked")
-        chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="decimal_1", chart_template="line_simple")
-        chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table")
+        chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="decimal_1", chart_template="line_simple", custom_colors=custom_colors)
+        chart_creator.create_table(index=4, sheet_name="Tab1", chart_template="data_table", highlighted_category=departamento)
         chart_creator.create_table(index=5, sheet_name="Tab2", chart_template="text_table")
         
         chart_creator.save_workbook()
@@ -316,11 +320,13 @@ def uso_masivo_telecomunicaciones_xl():
 # TODO: Un logging para cada save
 if __name__ == "__main__":
     #brecha_digital_xl()
-    #edificaciones_antisismicas_xl()
-    #infraestructura_vial_xl()
-    #reforzamiento_programas_sociales_xl() # Para probar
-    #uso_tecnologia_educacion_xl() # También para probar
-    #aprovechamiento_ruta_seda()
-    uso_masivo_telecomunicaciones_xl()
+    edificaciones_antisismicas_xl()
+    #infraestructura_vial_xl() # Funcionando
+    #reforzamiento_programas_sociales_xl() # Funcionando
+    #uso_tecnologia_educacion_xl() # Funcionando
+    #aprovechamiento_ruta_seda() # Funcionando
+    #uso_masivo_telecomunicaciones_xl() # Funcionando
+
+
     
     
