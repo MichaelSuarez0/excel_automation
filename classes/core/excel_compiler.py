@@ -1,4 +1,3 @@
-import win32com.client as win32
 import xlwings as xw
 from xlwings import Sheet
 import re
@@ -180,6 +179,7 @@ class ExcelCompiler:
         self.wb.Close(SaveChanges=False)
         logging.info("Workbook closed without saving.")
 
+    # TODO: Replicate sheet creation as excel_writer if sheet name not exists
     def _get_sheet(self, sheet: int | str) -> Sheet:
         if isinstance(sheet, int):
             if not 0 <= sheet <= self.count_sheets:
@@ -215,66 +215,57 @@ class ExcelCompiler:
             self.add_columns(sheet.name, num_columns, width)
         logging.info(f"Added {num_columns} columns to all sheets.")
     
-    def freeze_top_row(self, sheet_name: str):
-        sheet = self.wb.Sheets(sheet_name)
-        sheet.Activate()  # Activamos la hoja
-        sheet.Cells(2, 1).Select()  # Seleccionamos la celda A2 (la fila 1 se inmoviliza por encima de ella)
-        sheet.Application.ActiveWindow.FreezePanes = True
+    def freeze_top_row(self, sheet: str | int):
+        ws =  self._get_sheet(sheet)
+        ws.activate()  # Activamos la hoja
+        ws.range("A2").select() # Seleccionamos la celda A2 (la fila 1 se inmoviliza por encima de ella)
+        ws.api.Application.ActiveWindow.FreezePanes = True
 
     def freeze_top_row_all_sheets(self):
-        for sheet in self.wb.Sheets:
-            self.freeze_top_row(sheet.Name)
+        for sheet in self.wb.sheets:
+            self.freeze_top_row(sheet.name)
     
-    # TODO: Replicate sheet creation as excel_writer if sheet name not exists
-    def _ensure_sheet_exists(self, sheet: int | str):
-        if not isinstance(sheet, (int, str)):
-            raise ValueError("sheet must be either an int (index) or str (name)")
-        return self.wb.Sheets(sheet)
-    
-    def get_last_row(self, sheet)-> int:
-        sheet = self._ensure_sheet_exists(sheet)
-        used_range = sheet.UsedRange
-        last_row = used_range.Row + used_range.Rows.Count - 1
-        return last_row
-        
+    def get_last_row(self, sheet: str | int)-> int:
+        ws = self._get_sheet(sheet)
+        return ws.used_range.last_cell.row
 
     # TODO: Add formats or templates in another script
     # TODO:   ws.Columns("B:B").AutoFit()
     def write_title(self, sheet: str | int, row: int, column: int, value: str):
-        sheet = self._ensure_sheet_exists(sheet)
-        cell = sheet.Cells(row, column)
+        ws = self._get_sheet(sheet)
+        cell = ws.range(row, column)
 
         # Create a Range object for the cell
         #cell = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
         
         # Set the value
-        cell.Value = value
+        cell.value = value
         
         # Apply formatting
-        cell.Font.Name = 'Calibri'
-        cell.Font.Size = 14
-        cell.Font.Bold = True
-        cell.Font.Color = Color.BLACK.win32
+        cell.api.Font.Name = 'Calibri'
+        cell.api.Font.Size = 14
+        cell.api.Font.Bold = True
+        cell.api.Font.Color = Color.BLACK.win32
         
-        cell.WrapText = False
+        cell.api.WrapText = False
     
     def write_to_cell(self, sheet: int | str, row: int, column: int, value: str, bold: bool = False):
-        sheet = self._ensure_sheet_exists(sheet)
-        cell = sheet.Cells(row, column)
+        ws = self._get_sheet(sheet)
+        cell = ws.range(row, column)
 
         # Create a Range object for the cell
         #cell = sheet.Range(sheet.Cells(row, column), sheet.Cells(row, column))
         
         # Set the value
-        cell.Value = value
+        cell.value = value
         
         # Apply formatting
-        cell.Font.Name = 'Calibri'
-        cell.Font.Size = 10
-        cell.Font.Bold = bold
-        cell.Font.Color = Color.BLUE_DARK.win32
+        cell.api.Font.Name = 'Calibri'
+        cell.api.Font.Size = 10
+        cell.api.Font.Bold = bold
+        cell.api.Font.Color = Color.BLUE_DARK.win32
         
-        cell.WrapText = False
+        cell.api.WrapText = False
     
     # TODO: modularize sheet exists
     def write_table(self, sheet_name: str, df: DataFrame, start_row: int = 1 , start_col: int = 1):
@@ -315,9 +306,8 @@ class ExcelCompiler:
     
     
     def write_to_cell_all_sheets(self, start_row: int, start_column: int, value: str):
-        for sheet in self.wb.Sheets:
-            sheet_name = sheet.Name  # Obtener el nombre de la hoja
-            self.write_title(sheet_name, start_row, start_column, value)
+        for sheet in self.wb.sheets:
+            self.write_title(sheet.name, start_row, start_column, value)
         logging.info(f"Written value '{value}' to cell ({start_row}, {start_column}) in all sheets'.")
     
     
