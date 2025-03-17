@@ -1,10 +1,11 @@
 import os
 import pandas as pd
+from excel_automation.classes.utils.colors import Color
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 from excel_automation.classes.utils.formats import Formats
-from typing import Tuple, Literal
 import numpy as np
+import copy
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "products")
@@ -123,12 +124,12 @@ class ExcelFormatter:
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
     
     # TODO: Set row heights dinamically
-    def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
+    def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, highlighted_category: str = ""):
         """Applies formatting to data tables"""
 
         ### Widths and heights
         # First column width
-        worksheet.set_column('A:A', 13)
+        worksheet.set_column('A:A', 13) # o 11
         if len(df.columns) > 1:
             if len(str(df.iloc[0,1])) > 11:
                 worksheet.set_column(1, len(df.columns) - 1, 14)
@@ -137,11 +138,11 @@ class ExcelFormatter:
 
         # Rest of columns widths
         for col_idx in range(1, df.shape[1]):
-            worksheet.set_column(col_idx, col_idx, 5.15)
+            worksheet.set_column(col_idx, col_idx, 5.2) # O 7
 
         # Row heights
         for row_idx in range(df.shape[0]+1):
-            worksheet.set_row(row_idx, 15)
+            worksheet.set_row(row_idx, 26) # o 30
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
@@ -149,21 +150,36 @@ class ExcelFormatter:
         fmt['data']['num_format'] = num_format
 
         ### Writing data
+        highlighted_row = False
         for row_idx in range(df.shape[0]):
             cell_value = df.iloc[row_idx, 0]
+
             # First column (e.g., dates or text)
-            worksheet.write(row_idx + 1, 0, cell_value, self.workbook.add_format(fmt['first_column']))
+            if highlighted_category and cell_value == highlighted_category:
+                highlighted_row = True
+                fmt_modified = copy.deepcopy(fmt["first_column"])
+                fmt_modified['bg_color'] = Color.BLUE_LIGHT
+                fmt_modified['bold'] = True,
+                worksheet.write(row_idx + 1, 0, cell_value, self.workbook.add_format(fmt_modified))
+            else:
+                worksheet.write(row_idx + 1, 0, cell_value, self.workbook.add_format(fmt['first_column']))
 
             # Rest of columns (numeric data)
             for col_idx in range(1, df.shape[1]):
                 cell_value = df.iloc[row_idx, col_idx]
+                fmt_modified = copy.deepcopy(fmt["data"])
 
+                if highlighted_row:
+                    fmt_modified['bg_color'] = Color.BLUE_LIGHT
+                    fmt_modified['bold'] = True,
+                
                 # Skip NaN/Inf values by checking if the value is NaN or Inf
                 if pd.isna(cell_value) or (isinstance(cell_value, (int, float)) and np.isinf(cell_value)):
                     worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
                 else:
-                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt['data']))
-        
+                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt_modified))
+            highlighted_row = False
+
         # Headers
         for col_num, col_name in enumerate(df.columns):
             worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt["header"]))
@@ -175,6 +191,8 @@ class ExcelFormatter:
         worksheet.set_column('B:B', 40)
         worksheet.set_column('C:C', 40)
         worksheet.set_column('D:D', 15)
+        #worksheet.set_column('E:F', 25)
+        #worksheet.set_column('G:G', 15)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
