@@ -1,7 +1,6 @@
 import os
 import pandas as pd
 import openpyxl
-from icecream import ic
 import pandas as pd
 from typing import Literal, Optional
 
@@ -34,38 +33,6 @@ class ExcelDataExtractor():
         self.wb = openpyxl.load_workbook(self.file_path)
         # Access different worksheets with self.wb.sheetnames[int]
         self.ws= self.wb.active
-    
-    def save_workbook(self, output_name: str)-> None:
-        """Save your workbook. Automatically includes extension in the name if not declared.
-
-        Args:
-            name (str, optional): Choose a name for your Excel file. Defaults to "excel_test".
-        """
-        if not output_name:
-            self.wb.save(self.output_path)
-        else:
-            self.wb.save(os.path.join)
-        print(f'✅ Excel guardado como "{self.output_path}"')
-
-    # def open_new_workbook(self, ws_name: str = None) -> Tuple[Workbook, Worksheet]:
-    #     """Dynamically create new workbooks and name them wb2, wb3, etc."""        
-    #     self.wb_count += 1  
-        
-    #     # Create new workbook and assign it dynamically
-    #     new_wb_name = f"wb{self.wb_count}"
-    #     self.workbooks[(self.wb_count)] = Workbook()
-        
-    #     # Create new variables dynamically (starting with .self)
-    #     setattr(self, new_wb_name, self.workbooks[self.wb_count])
-    #     setattr(self, f"ws{self.wb_count}", self.workbooks[self.wb_count].active)
-    #     # Get the active worksheet or create a new one with the specified name
-    #     if ws_name:
-    #         new_ws = self.workbooks[self.wb_count].create_sheet(title=ws_name)
-    #     else:
-    #         new_ws = self.workbooks[self.wb_count].active
-
-    #     print(f"✅ Created new workbook: {new_wb_name}")
-    #     return self.workbooks[self.wb_count], new_ws
     
     @property
     def sheet_names(self) -> list: 
@@ -146,11 +113,11 @@ class ExcelDataExtractor():
         normalized_dfs = []
         for df in dfs:
             # If headers are not strings (categories), df will be transposed.
-            if isinstance(df.iloc[1,0], str) and not df.shape[1] < 3: # Consider using as well if not isinstance(df.columns[1], str)
-                index_name = df.columns[0]
-                df = df.set_index(df.columns[0]).transpose() # Manually set another index, or else the default index stays on top
-                df.reset_index(inplace=True)
-                df.columns = [index_name] + df.columns[1:].tolist()  # I loathe pandas indexes
+            #if isinstance(df.iloc[0,1], str) and not df.shape[1] < 3: # Consider using as well if not isinstance(df.columns[1], str)
+            index_name = df.columns[0]
+            df = df.set_index(df.columns[0]).transpose() # Manually set another index, or else the default index stays on top
+            df.reset_index(inplace=True)
+            df.columns = [index_name] + df.columns[1:].tolist()  # I loathe pandas indexes
             normalized_dfs.append(df)
         
         # If a single DataFrame was passed, return just that DataFrame.
@@ -159,8 +126,7 @@ class ExcelDataExtractor():
         
         return normalized_dfs
     
-    # TODO: Raise KeyError if selected category is not found
-    # TODO: How parameter (vertical / horizontal)
+    # TODO: Raise KeyError if at least 1 selected category is not found
     def filter_data(
         self,
         df: pd.DataFrame,
@@ -169,70 +135,51 @@ class ExcelDataExtractor():
         key: Literal["row", "column"] = "column"
     ) -> pd.DataFrame:
         """
-        Filters the input DataFrame by selecting columns or rows based on the provided categories.
-        Should be run AFTER normalizing orientation for all DataFrames.
+        Filters a DataFrame by selecting or excluding specific columns or rows.
 
-        This function filters the given DataFrame (`df`) by selecting only columns or rows (containing
-        categories like Departamento) that match the values in `selected_categories`. It ensures no 
-        duplicated columns or rows are selected, and always includes the first column of the DataFrame 
-        (typically used as an identifier or key). If no `selected_categories` are provided, the function 
-        returns the original DataFrame without any filtering. If no columns or rows match `selected_categories`, 
-        a `KeyError` will be raised.
+        This function filters `df` by keeping columns or rows in `selected_categories`. 
+        Alternatively, it can also filter out `selected_categories`.
 
-        Parameters:
+        Parameters
         ----------
         df : pd.DataFrame
-            The DataFrame to be filtered.
+            The DataFrame to filter.
         selected_categories : list[str], optional
-            A list of column names or row values to be included in the filtered DataFrame. If `None`, 
-            no filtering is applied, and the original DataFrame is returned.
-        filter_out : bool, optional, default=False
-            If `True`, it excludes the columns or rows in `selected_categories`. If `False`, only those 
-            columns or rows matching `selected_categories` are selected.
-        key : {"row", "column"}, optional, default="column"
-            The axis to filter along. If "column", filters the columns; if "row", filters the rows based 
-            on the values in the first column.
+            A list of column names or row values to include/exclude. If `None`, no filtering is applied.
+        filter_out : bool, default=False
+            If `True`, excludes the specified columns/rows instead of including them.
+        key : {"row", "column"}, default="column"
+            Determines whether filtering is applied to columns or rows (based on the first column).
 
-        Returns:
+        Returns
         -------
         pd.DataFrame
-            A DataFrame containing only the selected columns or rows, including the first column.
+            The filtered DataFrame, including the first column.
 
-        Raises:
-        -------
+        Raises
+        ------
         KeyError
-            If no columns or rows match the `selected_categories`.
+            If no matching columns or rows are found.
 
-        Example:
+        Examples
         --------
-        Example DataFrame:
-
-            Departamento  2014  2015
-        0         Lima    10    11
-        1     Arequipa    20    21
-        2        Cusco    30    31
-
-        selected_categories = ['2014']
-        filtered_df = filter_data(df, selected_categories, key="column")
-        print(filtered_df)
-
-        Output:
-        --------
-            Departamento  2014
+        >>> df = pd.DataFrame({
+        ...     "Departamento": ["Lima", "Arequipa", "Cusco"],
+        ...     "2014": [10, 20, 30],
+        ...     "2015": [11, 21, 31]
+        ... })
+        
+        **Filtering columns:**
+        >>> filter_data(df, ['2014'], key="column")
+        Departamento  2014
         0         Lima    10
         1     Arequipa    20
         2        Cusco    30
-
-        # Example for filtering rows:
-        selected_categories = ['Lima']
-        filtered_df = filter_data(df, selected_categories, key="row")
-        print(filtered_df)
-
-        Output:
-        --------
-        Departamento   2014 2015
-        0   Lima        10  11
-
+        
+        **Filtering rows:**
+        >>> filter_data(df, ['Lima'], key="row")
+        Departamento  2014  2015
+        0         Lima    10    11
         """
         if key == "column":
             cols = [df.columns[0]] # Labels are in Row 1 (headers)
