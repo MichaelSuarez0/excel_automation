@@ -1,27 +1,36 @@
 from excel_automation.classes.utils.colors import Color
-from typing import Any, TypedDict, Literal
+from typing import Any, Literal
 from functools import cached_property
+from pydantic import BaseModel, Field
+from enum import Enum
+
+class Alignment(str, Enum):
+    left = 'left'
+    right = 'right'
+    center = 'center'
+    justify = 'justify'
 
 
-class CellConfigs(TypedDict):
+class CellConfig(BaseModel):
     bg_color: str
     font_color: str
-    font_size: int
-    bold: bool
-    align: str
-    valign: str
+    font_size: int = Field(..., gt=0, description="El tamaño de la fuente debe ser mayor que 0")
+    bold: bool = False
+    align: Alignment
+    valign: Alignment
     num_format: str
-    border: int
+    border: int = Field(..., ge=0, description="El grosor del borde debe ser 0 o mayor")
     border_color: str
+    text_wrap: bool = False
 
 
-class Formats:
+class Formats(BaseModel):
     @cached_property
     def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return NumericTypes().numeric_types
 
     @cached_property
-    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfig]]:
         return CellFormats().cells
 
     @cached_property
@@ -47,21 +56,24 @@ class NumericTypes:
         }
     
 
+# TODO: Index con column widths dinámucos según el número de letras del título
 class CellFormats:
     @cached_property
-    def cells(self) -> dict[Literal['database', 'data_table', 'text_table', 'index', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfigs]]:
+    def cells(self) -> dict[
+        Literal['database', 'data_table', 'text_table', 'index', 'report'], 
+        dict[Literal['header', 'first_column', 'data'], CellConfig]]:
         """Carga y almacena formatos de celdas para hojas que contienen datos (database e index)"""
         white_borders = {
             'border': 1,
-            'border_color': Color.WHITE.value,
+            'border_color': Color.WHITE,
         }
 
         return { 
             'database': {
                 'header': {
                     **white_borders,
-                    'bg_color': Color.BLUE_DARK.value,
-                    'font_color': Color.WHITE.value,
+                    'bg_color': Color.BLUE_DARK,
+                    'font_color': Color.WHITE,
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
@@ -70,13 +82,13 @@ class CellFormats:
                 },
                 'first_column': {
                     **white_borders,
-                    'bg_color': Color.GRAY_LIGHT.value,
+                    'bg_color': Color.GRAY_LIGHT,
                     'text_wrap': True,
                     'font_size': 10
                 },
                 'data': {
                     'border': 1,
-                    'border_color': Color.GRAY_LIGHT.value,
+                    'border_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'font_size': 10
                 }
@@ -84,8 +96,8 @@ class CellFormats:
             'text_table': {
                 'header': {
                     **white_borders,
-                    'bg_color': Color.BLUE_DARK.value,
-                    'font_color': Color.WHITE.value,
+                    'bg_color': Color.BLUE_DARK,
+                    'font_color': Color.WHITE,
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
@@ -94,7 +106,7 @@ class CellFormats:
                 },
                 'first_column': {
                     **white_borders,
-                    'bg_color': Color.GRAY_LIGHT.value,
+                    'bg_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'align': 'justify',
                     'text_wrap': True,
@@ -102,7 +114,7 @@ class CellFormats:
                 },
                 'data': {
                     'border': 1,
-                    'border_color': Color.GRAY_LIGHT.value,
+                    'border_color': Color.GRAY_LIGHT,
                     'align': 'justify',
                     'valign': 'vcenter',
                     'text_wrap': True,
@@ -112,8 +124,8 @@ class CellFormats:
             'data_table': {
                 'header': {
                     **white_borders,
-                    'bg_color': Color.BLUE_DARK.value,
-                    'font_color': Color.WHITE.value,
+                    'bg_color': Color.BLUE_DARK,
+                    'font_color': Color.WHITE,
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
@@ -122,7 +134,7 @@ class CellFormats:
                 },
                 'first_column': {
                     **white_borders,
-                    'bg_color': Color.GRAY_LIGHT.value,
+                    'bg_color': Color.GRAY_LIGHT,
                     'text_wrap': True,
                     'align': 'center',
                     'valign': 'vcenter',
@@ -130,7 +142,7 @@ class CellFormats:
                 },
                 'data': {
                     'border': 1,
-                    'border_color': Color.GRAY_LIGHT.value,
+                    'border_color': Color.GRAY_LIGHT,
                     'align': 'right',
                     'valign': 'vcenter',
                     'font_size': 10
@@ -139,8 +151,8 @@ class CellFormats:
             'index': {
                 'header': {
                     **white_borders,
-                    'bg_color': Color.BLUE_DARK.value,
-                    'font_color': Color.WHITE.value,
+                    'bg_color': Color.BLUE_DARK,
+                    'font_color': Color.WHITE,
                     'bold': True,
                     'align': 'center',
                     'valign': 'vcenter',
@@ -149,7 +161,7 @@ class CellFormats:
                 },
                 'first_column': {
                     **white_borders,
-                    'bg_color': Color.GRAY_LIGHT.value,
+                    'bg_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'align': 'justify',
                     'text_wrap': True,
@@ -157,7 +169,7 @@ class CellFormats:
                 },
                 'data': {
                     'border': 1,
-                    'border_color': Color.GRAY_LIGHT.value,
+                    'border_color': Color.GRAY_LIGHT,
                     'align': 'justify',
                     'valign': 'vcenter',
                     'text_wrap': True,
@@ -183,46 +195,46 @@ class CellFormats:
 class ChartFormats:
     def __init__(self):
         self._line_colors = [
-            Color.BLUE_DARK.value, 
-            Color.RED.value, 
-            Color.ORANGE.value, 
-            Color.GREEN_DARK.value, 
-            Color.PURPLE.value, 
-            Color.GRAY.value
+            Color.BLUE_DARK, 
+            Color.RED, 
+            Color.ORANGE, 
+            Color.GREEN_DARK, 
+            Color.PURPLE, 
+            Color.GRAY
         ]
         self._line_simple_colors = [
-            Color.RED.value, 
-            Color.BLUE_DARK.value,
-            Color.BLUE.value, 
+            Color.RED, 
+            Color.BLUE_DARK,
+            Color.BLUE, 
         ]
         self._line_single_colors = [
-            Color.BLUE.value, 
+            Color.BLUE, 
         ]
         self._column_colors = [
-            Color.BLUE_DARK.value, 
-            Color.RED.value, 
-            Color.BLUE.value, 
-            Color.GREEN_DARK.value, 
-            Color.ORANGE.value, 
-            Color.YELLOW.value, 
-            Color.GRAY.value
+            Color.BLUE_DARK, 
+            Color.RED, 
+            Color.BLUE, 
+            Color.GREEN_DARK, 
+            Color.ORANGE, 
+            Color.YELLOW, 
+            Color.GRAY
         ]
         self._column_simple_colors = [
-            Color.BLUE_DARK.value, 
-            Color.RED.value, 
-            Color.GRAY.value
+            Color.BLUE_DARK, 
+            Color.RED, 
+            Color.GRAY
         ]
         self._column_percent_stacked_colors = [
-            Color.GREEN_DARK.value, 
-            Color.BLUE.value, 
-            Color.BLUE_DARK.value,
-            Color.RED.value,
-            Color.GRAY.value
+            Color.GREEN_DARK, 
+            Color.BLUE, 
+            Color.BLUE_DARK,
+            Color.RED,
+            Color.GRAY
         ]
         self._bar_colors = [
-            Color.RED.value, 
-            Color.BLUE_DARK.value, 
-            Color.YELLOW.value
+            Color.RED, 
+            Color.BLUE_DARK, 
+            Color.YELLOW
         ]
 
     @cached_property
@@ -248,14 +260,22 @@ class ChartFormats:
         return {
             'title': {'name': ''},
             'size': {'width': 580, 'height': 300},
-            'legend': {'position': 'bottom'},
+            'legend': {'position': 'bottom'}   
+            #     'layout': {
+            #         'x': 0.20,
+            #         'y': 0.93,
+            #         'width': 0.60,
+            #         'height': 0.05
+            #     }
+            # }
+            ,
             'chartarea': {'border': {'none': True}},
             'plotarea': {
                 'layout': {
-                    'x': 0.11,
-                    'y': 0.05,
-                    'width': 0.85,
-                    'height': 0.76
+                    'x': 0.06,
+                    'y': 0.04,
+                    'width': 0.91,
+                    'height': 0.77
                 }
             },
             'x_axis': {
@@ -267,7 +287,7 @@ class ChartFormats:
             'y_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             }
         }
@@ -288,7 +308,7 @@ class ChartFormats:
             'x_axis': {
                 'mayor_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             }
         }
@@ -297,30 +317,28 @@ class ChartFormats:
         return {
             'colors': self._line_simple_colors,
             'dash_type': ['round_dot', 'square_dot', 'solid'],
-            'plotarea': {
-                'layout': {
-                    'x': 0.08,
-                    'y': 0.05,
-                    'width': 0.90,
-                    'height': 0.76
-                }
-            },
             'series': {
                 'smooth': True,
                 'line': {'width': 1.75},
                 'marker': {'type': 'circle', 'size': 6},
-                'data_labels': {'value': False}
+                'data_labels': {
+                    'value': True,
+                    'position': 'above',
+                    'font': {
+                        'size': 10
+                    }
+                }
             },
             'y_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             },
             'x_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             }
         }
@@ -330,14 +348,6 @@ class ChartFormats:
             'colors': self._line_single_colors,
             'legend': {'none': True},
             'dash_type': ['square_dot', 'solid'],
-            'plotarea': {
-                'layout': {
-                    'x': 0.07,
-                    'y': 0.05,
-                    'width': 0.89,
-                    'height': 0.85
-                }
-            },
             'series': {
                 'smooth': True,
                 'line': {'width': 2.5},
@@ -345,10 +355,10 @@ class ChartFormats:
                 'data_labels': {
                     'value': True,
                     'position': 'above',
-                    'fill': {'color': Color.BLUE_LIGHT.value},
+                    'fill': {'color': Color.BLUE_LIGHT},
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
+                        'color': Color.BLACK,
                         'size': 10.5
                     },
                     'border': {
@@ -360,7 +370,7 @@ class ChartFormats:
                 'visible': False,
                 'major_gridlines': {
                     'visible': False,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             }
         }
@@ -368,14 +378,6 @@ class ChartFormats:
     def _line_monthly(self):
         return {
             'colors': self._line_simple_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.09,
-                    'y': 0.05,
-                    'width': 0.88,
-                    'height': 0.76
-                }
-            },
             'dash_type': ['solid', 'square_dot', 'round_dot'],
             'series': {
                 'smooth': True,
@@ -386,7 +388,7 @@ class ChartFormats:
            'x_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT.value}
+                    'line': {'color': Color.GRAY_LIGHT}
                 }
             }
             }
@@ -395,22 +397,14 @@ class ChartFormats:
     def _column(self):
         return {
             'colors': self._column_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.09,
-                    'y': 0.05,
-                    'width': 0.88,
-                    'height': 0.76
-                }
-            },
             'series': {
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
-                        'size': 10.5
+                        'color': Color.BLACK,
+                        'size': 10
                     }
                 }
             }
@@ -419,21 +413,13 @@ class ChartFormats:
     def _column_simple(self):
         return {
             'colors': self._column_simple_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.11,
-                    'y': 0.06,
-                    'width': 0.85,
-                    'height': 0.82
-                }
-            },
             'series': {
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
+                        'color': Color.BLACK,
                         'size': 10.5
                     }
                 }
@@ -453,21 +439,13 @@ class ChartFormats:
         return {
             'colors': self._column_simple_colors,
             'legend': {'none': True},
-            'plotarea': {
-                'layout': {
-                    'x': 0.03,
-                    'y': 0.06,
-                    'width': 0.95,
-                    'height': 0.82
-                }
-            },
             'series': {
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
+                        'color': Color.BLACK,
                         'size': 10.5
                     }
                 }
@@ -489,21 +467,13 @@ class ChartFormats:
     def _column_stacked(self):
         return {
             'colors': self._column_percent_stacked_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.09,
-                    'y': 0.05,
-                    'width': 0.88,
-                    'height': 0.76
-                }
-            },
             'series': {
                 'gap': 60,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.WHITE.value,
+                        'color': Color.WHITE,
                         'size': 10
                     }
                 }
@@ -515,7 +485,7 @@ class ChartFormats:
                 },
                 'line': {
                     'width': 1,
-                    'color': Color.GRAY_LIGHT.value
+                    'color': Color.GRAY_LIGHT
                }
             },
             'y_axis': {
@@ -533,14 +503,6 @@ class ChartFormats:
         return {
             'size': {'width': 570, 'height': 310},
             'colors': self._bar_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.01,
-                    'y': 0.03,
-                    'width': 0.80,
-                    'height': 0.87
-                }
-            },
             'series': {
                 'gap': 60,
                 'data_labels': {
@@ -548,7 +510,7 @@ class ChartFormats:
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
+                        'color': Color.BLACK,
                         'size': 10
                     }
                 }
@@ -569,14 +531,6 @@ class ChartFormats:
             'size': {'width': 570, 'height': 450},
             'legend': {'none': True},
             'colors': self._column_simple_colors,
-            'plotarea': {
-                'layout': {
-                    'x': 0.01,
-                    'y': 0.03,
-                    'width': 0.80,
-                    'height': 0.94
-                }
-            },
             'series': {
                 'gap': 40,
                 'data_labels': {
@@ -584,7 +538,7 @@ class ChartFormats:
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
-                        'color': Color.BLACK.value,
+                        'color': Color.BLACK,
                         'size': 10
                     }
                 }
