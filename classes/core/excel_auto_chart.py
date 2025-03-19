@@ -36,6 +36,7 @@ class ExcelAutoChart:
         self.sheet_list = []
         
     # TODO: Consider discussing chart font being Aptos Narrow
+    # TODO: chart.set_y_axis({'crossing': 'min'}) if values < 0
     def _create_base_chart(self, chart_type: str, chart_subtype: str = ""):
         """Default settings for all chart types"""
         chart = self.workbook.add_chart({'type': chart_type}) if not chart_subtype else self.workbook.add_chart({'type': chart_type, 'subtype': chart_subtype})

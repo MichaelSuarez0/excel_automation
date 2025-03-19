@@ -55,7 +55,14 @@ class ExcelWriterXL:
             self.writer.sheets[sheet_name] = worksheet
         return worksheet
 
-    def write_from_df(self, df: pd.DataFrame, sheet_name: str, num_format: str, format_template: Literal["database", "index", "data_table", "text_table"] | None = "database") -> Tuple[pd.DataFrame, Worksheet]:
+    def write_from_df(
+        self, 
+        df: pd.DataFrame, 
+        sheet_name: str, 
+        num_format: str, 
+        format_template: Literal["database", "index", "data_table", "text_table"] | None = "database",
+        highlighted_category: str = ""
+    ) -> Tuple[pd.DataFrame, Worksheet]:
         """
         Write a DataFrame to a specific worksheet with the specified formatting template.
         
@@ -85,7 +92,7 @@ class ExcelWriterXL:
         if format_template == "database":
             self.formatter.apply_database_format(worksheet, df, num_format)
         elif format_template == "data_table":
-            self.formatter.apply_data_table_format(worksheet, df, num_format)
+            self.formatter.apply_data_table_format(worksheet, df, num_format, highlighted_category)
         elif format_template == "text_table":
             self.formatter.apply_text_table_format(worksheet, df, num_format)    
         elif format_template == "index":

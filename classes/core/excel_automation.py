@@ -1,4 +1,3 @@
-from excel_automation.classes.utils.colors import Color
 from excel_automation.classes.core.excel_data_extractor import ExcelDataExtractor
 from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
 import pandas as pd
@@ -22,7 +21,7 @@ class ExcelAutomation:
         return self.extractor.count_sheets
 
     def worksheet_to_dataframe(self, sheet_index: int = None) -> pd.DataFrame:
-        return self.extractor.worksheet_to_dataframe(sheet_index=sheet_index)
+        return self.extractor.worksheet_to_dataframe(sheet=sheet_index)
     
     def worksheets_to_dataframes(self, include_first: bool = False) -> list[pd.DataFrame]:
         return self.extractor.worksheets_to_dataframes(include_first=include_first)

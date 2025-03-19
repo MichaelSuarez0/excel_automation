@@ -5,7 +5,7 @@ from enum import Enum
 class Color(str, Enum):
     RED: str = "#be0000"
     RED_LIGHT: str = "#FFABAB"
-    BLUE_LIGHT: str = "#A6CAEC"
+    BLUE_LIGHT: str = "#9AC2E6"
     BLUE: str = "#0060a4"
     BLUE_DARK: str = "#00194b"
     GREEN_DARK: str = "#008236"

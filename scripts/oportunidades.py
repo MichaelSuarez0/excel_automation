@@ -5,6 +5,8 @@ from functools import wraps
 import pandas as pd
 from string import Template
 from typing import Callable, Tuple
+from excel_automation.classes.utils.colors import Color
+
 
 def sustituir_departamento(text, departamento):
     text_template = Template(text)
@@ -191,8 +193,8 @@ def infraestructura_vial():
     file_name = "Mejoramiento de la infraestructura vial y ferroviaria"
 
     ### ETL
-    excel = ExcelDataExtractor(f"Oportunidad - {file_name}")
-    df_list = excel.worksheets_to_dataframes(False)
+    excel = ExcelDataExtractor(f"Oportunidad - {file_name}", "oportunidades")
+    df_list = excel.worksheets_to_dataframes(True)
     df_list[0] = convert_index_info(df_list[0], departamentos[0])
 
     ## Tab 1
@@ -207,13 +209,13 @@ def infraestructura_vial():
     df_list[5]['Var %'] = ((df_list[5]['2024'] - df_list[5]['2015']) / df_list[5]['2015'])
 
     ## Fig 1
-    df_list[1] = excel.normalize_orientation(df_list[1])
-    df_list[2] = excel.normalize_orientation(df_list[2])
-    df_list[1] = excel.filter_data(df_list[1], departamentos)
-    df_list[2] = excel.filter_data(df_list[2], departamentos)
-    df_list[1] = excel.concat_dataframes(df_list[1], df_list[1], "2014", "2024")
-    df_list[1] = excel.normalize_orientation(df_list[1])
-
+    #df_list[1:3] = excel.normalize_orientation(df_list[1:3])
+    df_list[1] = excel.filter_data(df_list[1], departamentos, key="row")
+    df_list[2] = excel.filter_data(df_list[2], departamentos, key="row")
+    df_list[1:3] = excel.normalize_orientation(df_list[1:3])
+    df_list[1] = excel.concat_dataframes(df_list[1], df_list[2], "2014", "2024")
+    df_list[1:3] = excel.normalize_orientation(df_list[1:3])
+    
     # Calcular el porcentaje de pavimentación para cada tipo de vía
     df_list[1]['Vecinal'] = (df_list[1]['Vecinal Pavimentada'] / df_list[1]['Vecinal Total'])
     df_list[1]['Departamental'] = (df_list[1]['Departamental Pavimentada'] / df_list[1]['Departamental Total'])
@@ -226,9 +228,8 @@ def infraestructura_vial():
     df_list[3].columns = ["Departamento", "Longitud (km)"]
     df_list[3] = df_list[3].sort_values(by = "Longitud (km)", ascending= True)
 
-
     ### Charts
-    chart_creator = ExcelAutoChart(df_list, f"{code} - {file_name}")
+    chart_creator = ExcelAutoChart(df_list, f"{code} - {file_name}_copy", "oportunidades")
     chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
     chart_creator.create_table(index=5, sheet_name="Tab1", chart_template="data_table", numeric_type="integer")
     chart_creator.create_bar_chart(index=1, sheet_name="Fig1", grouping="standard", numeric_type="percentage", chart_template="bar")
@@ -291,13 +292,14 @@ def uso_masivo_telecomunicaciones():
 # TODO: Actualizar databases según las revisiones de Jhon
 if __name__ == "__main__":
     #aprovechamiento_ruta_seda()
-    bellezas_naturales()
+    #bellezas_naturales()
     #uso_tecnologia_educacion()
     #edificaciones_antisismicas()
     #brecha_digital()
     #reforzamiento_programas_sociales()
     #infraestructura_vial()
-    #uso_masivo_telecomunicaciones()
+    uso_masivo_telecomunicaciones()
+
 
 
 

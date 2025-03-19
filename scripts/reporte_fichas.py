@@ -1,4 +1,3 @@
-from email.errors import InvalidBase64PaddingDefect
 import os
 from tracemalloc import start
 from excel_automation.classes.core.excel_compiler import ExcelCompiler
