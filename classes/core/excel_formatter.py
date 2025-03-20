@@ -1,9 +1,9 @@
 import os
 import pandas as pd
 from excel_automation.classes.utils.colors import Color
+from excel_automation.classes.utils.formats import Formats
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.utils.formats import Formats
 import numpy as np
 import copy
 

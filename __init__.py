@@ -1,10 +1,6 @@
 
-from .classes.core.excel_auto_chart import ExcelAutoChart
-from .classes.core.excel_compiler import ExcelCompiler
-
-globals().update({
-    "ExcelAutoChart": ExcelAutoChart,
-    "ExcelCompiler": ExcelCompiler,
-})
-
-#globals().update(locals())
+from .classes.core import ExcelCompiler
+from .classes.core import ExcelAutoChart
+from .classes.core import ExcelAutomation
+from .classes.core import ExcelDataExtractor
+from .classes.utils import Color

@@ -1,5 +1,5 @@
-from excel_automation.classes.core.excel_data_extractor import ExcelDataExtractor
-from excel_automation.classes.core.excel_auto_chart import ExcelAutoChart
+from excel_automation import ExcelDataExtractor
+from excel_automation import ExcelAutoChart
 from icecream import ic
 from functools import wraps
 import pandas as pd

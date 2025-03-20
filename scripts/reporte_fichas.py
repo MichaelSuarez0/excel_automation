@@ -1,6 +1,6 @@
 import os
 from tracemalloc import start
-from excel_automation.classes.core.excel_compiler import ExcelCompiler
+from excel_automation import ExcelCompiler
 from correos_automaticos.classes.file_manager import FileManager
 import re
 from icecream import ic

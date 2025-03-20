@@ -61,6 +61,8 @@ class ExcelAutoChart:
  
     # TODO: Data labels position (automatically?)
     # TODO: Implement manual logic for specific series (i.e. Peru series solid) if column.name == Peru
+    # TODO: Si es monthly, el tamaño del axis X debe ser 9 (no 10)
+    # TODO: Menor height si hay muchas series de leyendas
     def create_line_chart(
         self,
         index: int = 0,
