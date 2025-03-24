@@ -1,6 +1,8 @@
 from excel_automation import Color
 from excel_automation import ExcelDataExtractor
 from excel_automation import ExcelAutoChart
+from typing import Tuple
+from itertools import cycle
 from icecream import ic
 import os
 from string import Template
@@ -41,9 +43,19 @@ def sustituir_departamento(text, departamento):
     text_template = Template(text)
     return text_template.substitute(Departamento=departamento)
 
-def convert_index_info(df: pd.DataFrame, departamento) -> pd.DataFrame:
+def sustituir_otros(text, departamento, otro: str):
+    text_template = Template(text)
+    return text_template.substitute(Departamento=departamento, Otro=otro)
+
+
+def convert_index_info(df: pd.DataFrame, departamento: str, lista_otros: Tuple[str] = ()) -> pd.DataFrame:
     df = df[['Nombre', 'Título', 'Fuente', 'Formato número']].copy()
-    df['Título'] = df['Título'].apply(lambda x: sustituir_departamento(x, departamento))
+    if not lista_otros:
+        df['Título'] = df['Título'].apply(lambda x: sustituir_departamento(x, departamento))
+    else:
+        lista_otros = cycle(lista_otros)
+        df['Título'] = df['Título'].apply(lambda x: sustituir_otros(x, departamento, next(lista_otros)))
+    
     return df
 
 
@@ -316,15 +328,51 @@ def uso_masivo_telecomunicaciones_xl():
         
         chart_creator.save_workbook()
 
+# TODO: Considerar agregar un gráfico combinado con el porcentaje de visitantes extranjeros respecto del total
+# TODO: Ajustar tamaño del plotarea para fechas (las fechas se cortan) y el tamaño de la letra
+def bellezas_naturales():
+    # Variables
+    departamentos1 = ["Lambayeque"]
+    lugares = [("al Bosque de Pomac", "al museo de sitio Huaca Rajada")]
+    file_name_base = "Aprovechamiento de las bellezas naturales y arqueológicas departamentales"
+    code = "o10_{}"
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", "oportunidades")
+    dfs = excel.worksheets_to_dataframes()
+
+    for departamento in departamentos1:
+        df_list = dfs.copy()
+        lugares = cycle(lugares)
+        df_list[0] = convert_index_info(df_list[0], departamento, next(lugares))
+        df_list[-2] = excel.filter_data(df_list[-2], "Total")
+        df_list[-1] = excel.filter_data(df_list[-1], "Total")
+
+        code_clean = code.format(departamentos_codigos.get(departamento, departamento[:3].lower()))
+        file_name = f"{code_clean} - {file_name_base}"
+
+        # Charts
+        chart_creator = ExcelAutoChart(df_list, f"{file_name}", "oportunidades")
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", grouping="standard", highlighted_category=departamento, chart_template="bar_single")
+        chart_creator.create_line_chart(index=-2, sheet_name="Fig2", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly", custom_colors=[Color.GREEN_DARK])
+        chart_creator.create_line_chart(index=-1, sheet_name="Fig3", numeric_type="integer", axis_title="Visitantes", chart_template="line_monthly", custom_colors=[Color.ORANGE])
+        chart_creator.create_table(index=2, sheet_name="Tab1")
+
+        chart_creator.save_workbook()
+
+
+
 # TODO: Un logging para cada save
 if __name__ == "__main__":
     #brecha_digital_xl()
-    edificaciones_antisismicas_xl()
+    #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl() # Funcionando
     #reforzamiento_programas_sociales_xl() # Funcionando
     #uso_tecnologia_educacion_xl() # Funcionando
     #aprovechamiento_ruta_seda() # Funcionando
     #uso_masivo_telecomunicaciones_xl() # Funcionando
+    bellezas_naturales()
 
 
     
