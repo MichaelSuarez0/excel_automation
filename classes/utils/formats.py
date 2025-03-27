@@ -56,7 +56,7 @@ class NumericTypes:
         }
     
 
-# TODO: Index con column widths dinámucos según el número de letras del título
+# TODO: Return cycle para las listas (por ejemplo colores) y llamar al dict con next
 class CellFormats:
     @cached_property
     def cells(self) -> dict[
@@ -296,8 +296,8 @@ class ChartFormats:
         return {
             'colors': self._line_colors,
             'dash_type': [
-                'solid', 'round_dot', 'round_dot', 'round_dot',
-                'round_dot', 'round_dot', 'round_dot', 'round_dot'
+                'square_dot', 'round_dot', 'round_dot', 'round_dot',
+                'round_dot', 'round_dot', 'round_dot'
             ],
             'series': {
                 'smooth': True,
@@ -310,7 +310,8 @@ class ChartFormats:
                     'visible': True,
                     'line': {'color': Color.GRAY_LIGHT}
                 }
-            }
+            },
+            'y_axis': {'min': 0}
         }
 
     def _line_simple(self):
@@ -466,15 +467,16 @@ class ChartFormats:
     # Y max should be 100
     def _column_stacked(self):
         return {
+            'size': {'width': 580, 'height': 320},
             'colors': self._column_percent_stacked_colors,
             'series': {
-                'gap': 60,
+                'gap': 50,
                 'data_labels': {
                     'position': 'outside_end',
                     'font': {
                         'bold': True,
                         'color': Color.WHITE,
-                        'size': 10
+                        'size': 9
                     }
                 }
             },
@@ -490,9 +492,9 @@ class ChartFormats:
             },
             'y_axis': {
                 'minor_tick_mark': 'none',
-                'major_gridlines': {
-                    'visible': False,
-                },
+                # 'major_gridlines': {
+                #     'visible': False,
+                # },
                 'line': {
                     'none': True
                 }
