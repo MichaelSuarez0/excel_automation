@@ -1,4 +1,5 @@
 import os
+from re import M
 import pandas as pd
 from excel_automation.classes.utils.colors import Color
 from excel_automation.classes.utils.formats import Formats
@@ -93,7 +94,7 @@ class ExcelFormatter:
         ### Widths and heights
         worksheet.set_column('A:A', 27)
         worksheet.set_column('B:B', 57)
-        worksheet.set_row(0, 20)
+        worksheet.set_row(0, 29)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
@@ -123,26 +124,39 @@ class ExcelFormatter:
 
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
     
-    # TODO: Set row heights dinamically
-    def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, highlighted_category: str = ""):
+
+    def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, highlighted_categories: str | list = ""):
         """Applies formatting to data tables"""
 
+        if isinstance(highlighted_categories, str):
+            highlighted_categories = [highlighted_categories]
         ### Widths and heights
         # First column width
-        worksheet.set_column('A:A', 13) # o 11
-        if len(df.columns) > 1:
-            if len(str(df.iloc[0,1])) > 11:
-                worksheet.set_column(1, len(df.columns) - 1, 14)
-            else:
-                worksheet.set_column(1, len(df.columns) - 1, 10)
-
-        # Rest of columns widths
+        worksheet.set_column('A:A', 12)  # Ancho fijo para nombres
+        
+        # Columnas restantes (años y Var (%))
+        num_columns = df.shape[1] - 1 
+        base_width = 8.0 if num_columns <= 5 else (6.0 if num_columns <= 8 else 5.2)
+        
+        handicap = 0 if num_format == 0 else (2.3 if num_format in ('0.0', '0,0%') else 3.3)
         for col_idx in range(1, df.shape[1]):
-            worksheet.set_column(col_idx, col_idx, 5.2) # O 7
+            # Longitud máxima considerando solo parte entera (evita decimales inflados)
+            max_len = df.iloc[:, col_idx].astype(str).apply(
+                lambda x: len(x.split('.')[0])
+            ).max()
+                
+            dynamic_width = max(base_width, min(10, max_len + handicap))
+            dynamic_width = round(float(dynamic_width), 2)  # Convertir a Python float
+            
+            # Aplicar ancho + formato numérico
+            worksheet.set_column(col_idx, col_idx, dynamic_width)
 
         # Row heights
-        for row_idx in range(df.shape[0]+1):
-            worksheet.set_row(row_idx, 26) # o 30
+        for row_idx in range(1, df.shape[0]+1):
+            if df.shape[0] > 10:
+                worksheet.set_row(row_idx, 18)
+            else:
+                worksheet.set_row(row_idx, 26) # consider 30
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
@@ -155,7 +169,7 @@ class ExcelFormatter:
             cell_value = df.iloc[row_idx, 0]
 
             # First column (e.g., dates or text)
-            if highlighted_category and cell_value == highlighted_category:
+            if highlighted_categories and cell_value in highlighted_categories:
                 highlighted_row = True
                 fmt_modified = copy.deepcopy(fmt["first_column"])
                 fmt_modified['bg_color'] = Color.BLUE_LIGHT
@@ -168,14 +182,19 @@ class ExcelFormatter:
             for col_idx in range(1, df.shape[1]):
                 cell_value = df.iloc[row_idx, col_idx]
                 fmt_modified = copy.deepcopy(fmt["data"])
+                try:
+                    if int(cell_value) > 9999:
+                        fmt_modified['num_format'] = "# ### ##" + num_format
+                except ValueError:
+                    pass
 
                 if highlighted_row:
                     fmt_modified['bg_color'] = Color.BLUE_LIGHT
-                    fmt_modified['bold'] = True,
+                    fmt_modified['bold'] = True
                 
                 # Skip NaN/Inf values by checking if the value is NaN or Inf
                 if pd.isna(cell_value) or (isinstance(cell_value, (int, float)) and np.isinf(cell_value)):
-                    worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
+                    worksheet.write(row_idx + 1, col_idx, '', self.workbook.add_format(fmt_modified))  # Write an empty cell
                 else:
                     worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt_modified))
             highlighted_row = False
