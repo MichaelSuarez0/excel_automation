@@ -5,7 +5,7 @@ from xlsxwriter.worksheet import Worksheet
 from excel_automation.classes.core.excel_writer import ExcelWriterXL
 from excel_automation.classes.utils.colors import Color
 from excel_automation.classes.utils.formats import Formats
-from typing import Tuple, Literal
+from typing import Literal
 from itertools import cycle
 from icecream import ic
 import copy
@@ -51,7 +51,7 @@ class ExcelAutoChart:
     
     def _configure_axis(self, num_format: str):
         # Axis configuration
-        if num_format in ('0.0', '0.00'):
+        if num_format in ('0', '0.0', '0.00'):
             axis_type = '0'
         elif num_format in ('0.0%'):
             axis_type = '0%'
@@ -119,9 +119,12 @@ class ExcelAutoChart:
         
         # Set legend based on number of columns (series) and modify plotarea
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
-        if df.shape[1] < 3:
+        columns = df.shape[1] - 1
+        if columns == 1:
             chart.set_legend({'none': True})
             plot_area["layout"]["height"] += 0.10
+        elif columns > 4:
+            plot_area["layout"]["height"] -= 0.10
         
         if axis_title:
             plot_area["layout"]["x"] += 0.03
@@ -159,7 +162,7 @@ class ExcelAutoChart:
                 'data_labels': {
                     **configs['series'].get('data_labels', {}),
                     'value': configs['series']['data_labels'].get('value', True),
-                    'position': configs['series']['data_labels'].get('position', True),
+                    'position': configs['series']['data_labels'].get('position', 'above'),
                     'num_format': num_format,
                     'fill': {'color': Color.BLUE_LIGHT,
                              'transparency': 100 if chart_template != "line_single" else 0},
@@ -268,13 +271,30 @@ class ExcelAutoChart:
 
         # Set legend based on number of columns (series) and modify plotarea
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
-        if df.shape[1] < 3:
+        columns = df.shape[1] - 1
+        if columns == 1:
             chart.set_legend({'none': True})
             plot_area["layout"]["height"] += 0.10
+        elif columns > 4:
+            plot_area["layout"]["height"] -= 0.10
+            chart.set_legend({
+                "layout": {
+                    'x':      0.09,
+                    'y':      0.90,
+                    'width':  0.85,
+                    'height': 0.19
+                    }
+                }
+            )
         
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
+
+        # Override base chart configurations
+        chart.set_plotarea(plot_area)
+        if "size" in configs:
+            chart.set_size(configs["size"])
 
         # Override base chart configurations
         chart.set_plotarea(plot_area)
@@ -467,14 +487,13 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet 
 
-    
     def create_table(
         self,
         index: int,
         sheet_name: str,
         chart_template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        highlighted_category: str =""
+        highlighted_categories: str | list = ""
     ) -> Worksheet:
         """
         Generates a table in an Excel worksheet based on a DataFrame from the given list of DataFrames.
@@ -508,7 +527,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template, highlighted_category)
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template, highlighted_categories)
         self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
