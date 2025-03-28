@@ -1,7 +1,6 @@
 from enum import Enum
 
 # TODO: DIFFERENT GRAY FOR BORDERS AND GRIDLINES
-#TODO: Un poco más azul el blue_dark
 class Color(str, Enum):
     RED: str = "#be0000"
     RED_LIGHT: str = "#FFABAB"
@@ -17,6 +16,7 @@ class Color(str, Enum):
     ORANGE: str = "#DD6909"
     PURPLE: str = "#7030A0"
     BLACK: str = "#000000"
+    BROWN: str = "#7A3D00"
 
     def __str__(self):
         return self.value 

@@ -76,12 +76,18 @@ class ExcelFormatter:
             # Rest of columns (numeric data)
             for col_idx in range(1, df.shape[1]):
                 cell_value = df.iloc[row_idx, col_idx]
+                fmt_modified = copy.deepcopy(fmt["data"])
+                try:
+                    if int(cell_value) > 9999:
+                        fmt_modified['num_format'] = "# ### ##" + num_format
+                except ValueError:
+                    pass
 
                 # Skip NaN/Inf values by checking if the value is NaN or Inf
                 if pd.isna(cell_value) or (isinstance(cell_value, (int, float)) and np.isinf(cell_value)):
                     worksheet.write(row_idx + 1, col_idx, '')  # Write an empty cell
                 else:
-                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt['data']))
+                    worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt_modified))
         
         # Headers
         for col_num, col_name in enumerate(df.columns):
@@ -207,10 +213,9 @@ class ExcelFormatter:
     def apply_index_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str = ""):
         # Set column widths
         worksheet.set_column('A:A', 10)
-        worksheet.set_column('B:B', 40)
-        worksheet.set_column('C:C', 40)
+        worksheet.set_column('B:C', 40)
         worksheet.set_column('D:D', 15)
-        #worksheet.set_column('E:F', 25)
+        worksheet.set_column('E:G', 25)
         #worksheet.set_column('G:G', 15)
 
         ### Basic configurations

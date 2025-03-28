@@ -130,7 +130,7 @@ class ExcelDataExtractor():
     def filter_data(
         self,
         df: pd.DataFrame,
-        selected_categories: Optional[list[str]],
+        selected_categories: list[str] | str,
         filter_out: bool = False,
         key: Literal["row", "column"] = "column"
     ) -> pd.DataFrame:
@@ -181,6 +181,9 @@ class ExcelDataExtractor():
         Departamento  2014  2015
         0         Lima    10    11
         """
+        if isinstance(selected_categories, str):
+            selected_categories = [selected_categories]
+            
         if key == "column":
             cols = [df.columns[0]] # Labels are in Row 1 (headers)
             

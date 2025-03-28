@@ -420,11 +420,13 @@ class ExcelAutoChart:
         # Load predefined formats
         chart = self._create_base_chart('bar', subtype)
 
-        # Set legend based on number of columns (series) and modify plotarea
+        # Modify plotarea
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
         plot_area["layout"]["x"] += 0.10
         plot_area["layout"]["width"] -= 0.10
-        plot_area["layout"]["height"] += 0.05
+        plot_area["layout"]["height"] += 0.10
+
+        # Set legend based on number of columns (series)
         if df.shape[1] < 3:
             chart.set_legend({'none': True})
             plot_area["layout"]["height"] += 0.10
@@ -442,7 +444,7 @@ class ExcelAutoChart:
         # Add data series with color scheme
         for idx, col in enumerate(df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
             col_idx = idx + 1  
-            value_data = (df[col] != 0).all()
+            #value_data = (df[col] != 0).all()
             current_color = next(color_cycle)
 
             points = []
@@ -454,13 +456,20 @@ class ExcelAutoChart:
                     else:
                         points.append({'fill': {'color': current_color}})
                     
+            # fmt_modified = copy.deepcopy(fmt["data"])
+            #     try:
+            #         if int(cell_value) > 9999:
+            #             fmt_modified['num_format'] = "# ### ##" + num_format
+            #     except ValueError:
+            #         pass
+                    
             series_params = {
                 **configs['series'],
                 'name': [sheet_name, 0, col_idx],
                 'values': [sheet_name, 1, col_idx, len(df), col_idx],  
                 'categories': [sheet_name, 1, 0, len(df), 0],  # Categorías en la primera columna 
                 'fill': {'color': current_color},
-                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format, 'value': value_data},
+                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format, 'value': True},
                 'points': points
             }
             chart.add_series(series_params)

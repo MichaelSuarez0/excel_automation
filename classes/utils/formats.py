@@ -523,9 +523,9 @@ class ChartFormats:
                 'major_tick_mark': 'none',
                 'major_gridlines': {'visible': False}
             },
-            'y_axis': {
-                'reverse': True,
-            }
+            # 'y_axis': {
+            #     'reverse': True,
+            # }
         }
 
     def _bar_single(self):
