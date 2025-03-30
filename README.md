@@ -1,11 +1,11 @@
-# Excel Automation
+# 📊🔄 Excel Automation
 
 Wrapper alrededor de las librerías más populares que interactúan con Excel (xlswriter, xlwings, pandas) especializado para la generación de gráficos con formatos predefinidos y la creación de reportes.
 
 ## Table of Contents
 
-1. [Contexto del proyecto](#Contexto del proyecto)
-2. [Clases y Métodos](#Clases y Métodos)  
+1. [Contexto del proyecto](#contexto-del-proyecto)
+2. [Clases y Métodos](#clases-y-metodos)  
 3. [Structure](#structure)  
 4. [Example](#Example)  
 
@@ -43,29 +43,32 @@ The repository is organized as follows:
 ```plaintext
 excel_automation/
 │
-├── charts/                      # Directory for generated charts
+├── core/                        # Módulo principal
+│   ├── __init__.py
+│   ├── excel_auto_chart.py      # Generación de gráficos con XlsxWriter
+│   ├── excel_compiler.py        # Generación de reportes con Xlwings
+│   ├── excel_data_extractor.py  # Extracción de datos con Pandas
+│   ├── excel_writer.py          # Escritura básica de archivos Excel
+│   └── excel_formatter.py       # Escritura con formatos
 │
-├── classes/                     
-│   ├── excel_automation.py      # Core class 
-│   └── excel_data_extractor.py  # Pandas-based class for basic ETL functions withing Excel.
-│   └── excel_auto_chart.py      # Xlsxwriter-based class to automate chart-creation with DFs.
-│   └── excel_formatter.py       # Openpyxl-based class to apply format to existing Excel files.
-│   └── excel_handler.py         # Win32-based class to rearrange Excel files preserving format.
+├── utils/                       # Utilidades complementarias
+│   ├── __init__.py
+│   ├── colors.py                # Gestión de colores (hex)
+│   ├── formats.py               # Plantillas de formato predefinidas
 │
-├── databases/                   # Folder for storing simple databases in Excel
+├── databases/                   # Bases de datos primarias (raw)
 │
-├── macros/                      # Other macros for Office applications
+├── products/                    # Reportes generados
 │
-├── scripts/                     
-│   ├── chart_creator.py         # Script for creating charts in Excel
-│   └── report_generator.py
 │
+├── scripts/                     # Scripts de ejecución
+│     
 ├── .gitignore                   
 ├── LICENSE                      
-├── README.md                    
+└── README.md                                        
 ```
 
-### Example
+### Ejemplo
 
 Esta función genera tantos Excels como departamentos hay en la lista. Las hojas Index, Fig3 y Fig4 son personalizadas para cada departamento.
 
@@ -87,7 +90,7 @@ def uso_tecnologia_salud_xl():
     for departamento in departamentos:
         df_list = dfs.copy()
         df_list[0] = convert_index_info(df_list[0], departamento)
-        code_clean = code.format(departamentos_codigos.get(eliminar_acentos(departamento), eliminar_acentos(departamento)[:3].lower()))
+        code_clean = code.format(departamentos_codigos.get(departamento, departamento[:3].lower()))
         df_list[2] = excel.filter_data(df_list[2], departamento, key="row")
         df_list[2] = excel.normalize_orientation(df_list[2])
         df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/1_000_000
@@ -96,11 +99,11 @@ def uso_tecnologia_salud_xl():
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
-        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
-        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line")
-        chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_single")
-        chart_creator.create_bar_chart(index=3, sheet_name="Fig3", numeric_type="integer", chart_template="bar_single", highlighted_category=departamento)
-        chart_creator.create_column_chart(index=4, sheet_name="Fig4", numeric_type="integer", chart_template="column_single")
-        chart_creator.create_table(index=5, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.create_table(0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(1, sheet_name="Fig1", numeric_type="percentage", chart_template="line")
+        chart_creator.create_line_chart(2, sheet_name="Fig2", numeric_type="decimal_2", chart_template="line_single")
+        chart_creator.create_bar_chart(3, sheet_name="Fig3", numeric_type="integer", chart_template="bar_single", highlighted_category=departamento)
+        chart_creator.create_column_chart(4, sheet_name="Fig4", numeric_type="integer", chart_template="column_single")
+        chart_creator.create_table(5, sheet_name="Tab1", chart_template="text_table")
         chart_creator.save_workbook()
 ```
