@@ -1,8 +1,8 @@
 # 📊🔄 Excel Automation
 
-Wrapper alrededor de las librerías más populares que interactúan con Excel (xlswriter, xlwings, pandas) especializado para la generación de gráficos con formatos predefinidos y la creación de reportes.
+Wrapper alrededor de las librerías más populares que interactúan con Excel (xlswriter, xlwings, pandas) especializado para la generación de gráficos en Excel con formatos predefinidos y la creación de reportes.
 
-## Table of Contents
+## Tabla de contenido
 
 1. [Contexto del proyecto](#contexto-del-proyecto)
 2. [Clases y Métodos](#clases-y-metodos)  
@@ -11,11 +11,12 @@ Wrapper alrededor de las librerías más populares que interactúan con Excel (x
 
 ## Contexto del proyecto
 
-Este proyecto fue desarrollado durante  para la elaboración de fichas de Tendencias, Riesgos y Oportunidades territoriales.
+Este proyecto fue desarrollado para la elaboración de fichas de Tendencias, Riesgos y Oportunidades territoriales para el
+Observatorio Nacional de Prospectiva - Ceplan.
 Para cada rubro, se redactan por lo menos 240 fichas (10 por cada departamento). Cada ficha consta de aprox. tres gráficos. 
 Hasta antes del proyecto, cada gráfico y sus datos se realizaban *manualmente*.
 
-En ese sentido, Excel Automation permite elaborar gráficos automatizados para cada departamento, agrupados por temática.
+En ese sentido, Excel Automation me permite elaborar gráficos automatizados para cada departamento (un máximo de 25 a la vez).
 
 ## Clases y Métodos
 
@@ -24,17 +25,22 @@ El módulo tiene un enfoque de class composition. Las clases principales y sus m
 ### `ExcelDataExtractor` (ETL)
 | Método                     | Funcionalidad |
 |----------------------------|---------------|
-| `worksheets_to_dataframes()` | Convierte hojas de Excel en una lista de DataFrames limpios. Omite la primera hoja por defecto. |
+| `worksheets_to_dataframes()` | Convierte hojas de Excel en una lista de DataFrames. Pasa por una función axiliar que limpia columnas vacías y espacios vacíos de caracteres |
 | `filter_data(df, criteria)` | Filtra columnas (por nombres) o filas (por valores en la primera columna). Soporte para inclusiones/exclusiones. |
-| `normalize_orientation(df)` | Corrige tablas donde los encabezados están en filas en lugar de columnas. Transpone y reestructura automáticamente. |
+| `normalize_orientation(df)` | Transpone tablas sin alterar la estructura de los DataFrames |
 
 ### `ExcelAutoChart` (Visualización)
-| Método                  | Parámetros Clave | Descripción |
-|-------------------------|------------------|-------------|
-| `create_bar_chart()`     | `numeric_type`, `highlighted_category` | Genera gráficos de barras con resaltado de categorías específicas y formato numérico configurable. |
-| `create_line_chart()`    | `chart_template`, `axis_title` | Crea series temporales con plantillas para datos mensuales/anuales. Configuración de ejes y leyendas. |
-| `create_table()`         | `chart_template`, `highlighted_categories` | Produce tablas listas para publicación con alineación condicional y estilos predefinidos. |
+| Método                  | Descripción |
+|-------------------------|-------------|
+| `create_line_chart()`    | Crea series temporales con formato numérico configurable y con plantillas para datos mensuales/anuales. |
+| `create_column_chart()`     | Genera gráficos de columnas (verticales) con plantillas para columnas apiladas o estándar. |
+| `create_bar_chart()`     | Genera gráficos de barras (horizontales) con resaltado configurable de categorías específicas. |
+| `create_table()`         | Crea tablas con ancho ajustado dinámicamente para encajar en una hoja de Word y con plantillas para datos numéricos o texto. |
 
+| Parámetros clave                  | Descripción |
+|-----------------------------------|-------------|
+| `numeric_type`    | Escoge entre los siguientes formatos: ['decimal_1', 'decimal_2', 'integer', 'percentage'] |
+| `chart_template`     | Plantillas predefinidas para los gráficos, generalmente ajustadas según el número de series o el tipo de dato |
 
 ## Structure
 
