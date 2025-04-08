@@ -211,6 +211,7 @@ def reforzamiento_programas_sociales_xl():
     excel = ExcelDataExtractor("Oportunidad - Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales", folder_name)
     dfs = excel.worksheets_to_dataframes(True)
     dfs[1:-1] = excel.normalize_orientation(dfs[1:-1])
+
     for dpto in departamentos:
         df_list = dfs.copy()
         departamentos1 = ["Total", dpto]
@@ -389,33 +390,38 @@ def transicion_energias_renovables_xl():
     años.append(2023)
 
     # Falta diferenciar entre Lima y Lima región
-    departamentos = ["Ucayali", "Junín", "Áncash", "Lima", "San Martín", "Madre de Dios", "Ica", 
-                     "Piura", "Loreto", "Lambayeque", "Amazonas", "La Libertad"]
+    # Investigar Fig 3 de "Madre de Dios" y La Libertad, al parecer no tienen registros de energía renovable
+    departamentos = ["Ucayali", "Junín", "Áncash", "Lima", "San Martín", "Ica", 
+                     "Piura", "Loreto", "Lambayeque", "Amazonas"]
     code = "o5_{}"
     file_name_base = "Transición regulada a energías renovables"
 
     # ETL
     excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", folder_name)
     dfs = excel.worksheets_to_dataframes()
-    dfs[1] = excel.filter_data(dfs[1], energias, filter_out=True)
-    dfs[1] = excel.filter_data(dfs[1], años, key="row")
-    dfs[2] = excel.filter_data(dfs[2], energias2, filter_out=True)
+    # dfs[1] = excel.filter_data(dfs[1], energias, filter_out=True)
+    # dfs[1] = excel.filter_data(dfs[1], años, key="row")
+    dfs[1] = excel.filter_data(dfs[1], energias2, filter_out=True)
+    dfs[3] = excel.filter_data(dfs[3], "Var (%) 23/15", filter_out=True)
 
     for departamento in departamentos:
         df_list = dfs.copy()
         df_list[0] = convert_index_info(df_list[0], departamento)
         code_clean = code.format(departamentos_codigos.get(eliminar_acentos(departamento), eliminar_acentos(departamento)[:3].lower()))
 
+        df_list[3] = excel.filter_data(df_list[3], departamento, key="row")
+        df_list[3] = excel.normalize_orientation(df_list[3])
+
         # Charts
         chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, "transicion_energias_renovables"))
         chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
-        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", 
-                                        custom_colors=[Color.RED, Color.BLUE_DARK, Color.GREEN_DARK], chart_template="line")
-        chart_creator.create_column_chart(index=2, sheet_name="Fig2", numeric_type="decimal_1", grouping="stacked", 
+        # chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", 
+        #                                 custom_colors=[Color.RED, Color.BLUE_DARK, Color.GREEN_DARK], chart_template="line")
+        chart_creator.create_column_chart(index=1, sheet_name="Fig1", numeric_type="decimal_1", grouping="stacked", 
                                           chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.YELLOW, Color.BLUE_LIGHT])
-        chart_creator.create_table(index=3, sheet_name="Tab1", chart_template="data_table", numeric_type="decimal_1", highlighted_categories=departamento)
-        chart_creator.create_table(index=4, sheet_name="Tab2", chart_template="data_table", numeric_type="integer", highlighted_categories=[departamento, "Total"])
-        chart_creator.create_table(index=5, sheet_name="Tab3", chart_template="text_table")
+        chart_creator.create_table(index=2, sheet_name="Tab1", chart_template="data_table", numeric_type="integer", highlighted_categories=[departamento, "Total"])
+        chart_creator.create_line_chart(index=3, sheet_name="Fig2", chart_template="line_single", numeric_type="decimal_1")
+        chart_creator.create_table(index=4, sheet_name="Tab2", chart_template="text_table")
         chart_creator.save_workbook()
 
 def demanda_productos_organicos_xl():
@@ -468,18 +474,55 @@ def demanda_productos_organicos_xl():
         chart_creator.save_workbook()
 
 
+def uso_tecnologia_salud_xl():
+    departamentos = ["Arequipa", "Tacna", "Lambayeque", "Callao", "Moquegua", "Áncash", "San Martín", "Junín", "Ica", "La Libertad"]
+    code = "o8_{}"
+    file_name_base = "Uso de la tecnología e innovación en salud"
+
+    años = list(range(2000, 2023, 2))
+    años.append(2023)
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", folder_name)
+    dfs = excel.worksheets_to_dataframes()
+    dfs[1] = excel.filter_data(dfs[1], años, key="row")
+    dfs[1] = excel.filter_data(dfs[1], "Reino Unido", key="column", filter_out=True)
+    
+    for departamento in departamentos:
+        df_list = dfs.copy()
+        df_list[0] = convert_index_info(df_list[0], departamento)
+        code_clean = code.format(departamentos_codigos.get(eliminar_acentos(departamento), eliminar_acentos(departamento)[:3].lower()))
+        df_list[2] = excel.filter_data(df_list[2], departamento, key="row")
+        df_list[2] = excel.normalize_orientation(df_list[2])
+        df_list[2].iloc[:,1] = df_list[2].iloc[:,1]/1_000_000
+        df_list[4] = excel.filter_data(df_list[4], departamento, key="row")
+        df_list[4] = df_list[4].iloc[:, 1:]
+
+        # Charts
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line")
+        chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="decimal_1", chart_template="line_single")
+        chart_creator.create_bar_chart(index=3, sheet_name="Fig3", numeric_type="integer", chart_template="bar_single", highlighted_category=departamento)
+        chart_creator.create_column_chart(index=4, sheet_name="Fig4", numeric_type="integer", chart_template="column_single")
+        chart_creator.create_table(index=5, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.save_workbook()
+
+
 # TODO: Un logging para cada save
+# Nota: todos funcionan
 if __name__ == "__main__":
     #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
-    #infraestructura_vial_xl() # Funcionando
-    #reforzamiento_programas_sociales_xl() # Funcionando
-    #uso_tecnologia_educacion_xl() # Funcionando
-    #aprovechamiento_ruta_seda() # Funcionando
-    #uso_masivo_telecomunicaciones_xl() # Funcionando
+    #infraestructura_vial_xl() 
+    #reforzamiento_programas_sociales_xl() 
+    #uso_tecnologia_educacion_xl() 
+    #aprovechamiento_ruta_seda() 
+    #uso_masivo_telecomunicaciones_xl() 
     #bellezas_naturales_xl()
-    #transicion_energias_renovables_xl()
-    demanda_productos_organicos_xl()
+    transicion_energias_renovables_xl()
+    #demanda_productos_organicos_xl()
+    #uso_tecnologia_salud_xl()
 
 
 
