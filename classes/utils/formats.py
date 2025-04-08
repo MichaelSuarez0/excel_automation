@@ -195,8 +195,8 @@ class CellFormats:
 class ChartFormats:
     def __init__(self):
         self._line_colors = [
-            Color.BLUE_DARK, 
             Color.RED, 
+            Color.BLUE_DARK, 
             Color.ORANGE, 
             Color.GREEN_DARK, 
             Color.PURPLE, 
@@ -306,12 +306,18 @@ class ChartFormats:
                 'data_labels': {'value': False}
             },
             'x_axis': {
-                'mayor_gridlines': {
+                'minor_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_LIGHT},
                 }
             },
-            'y_axis': {'min': 0}
+            'y_axis': {
+                'min': 0,
+                'major_gridlines': {
+                    'visible': True,
+                    'line': {'color': Color.GRAY_LIGHT},
+                }
+            }
         }
 
     def _line_simple(self):
@@ -392,7 +398,7 @@ class ChartFormats:
                     'line': {'color': Color.GRAY_LIGHT}
                 }
             }
-            }
+        }
         
 
     def _column(self):

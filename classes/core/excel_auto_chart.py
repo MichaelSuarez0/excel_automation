@@ -62,7 +62,6 @@ class ExcelAutoChart:
     # TODO: Data labels position (automatically?)
     # TODO: Implement manual logic for specific series (i.e. Peru series solid) if column.name == Peru
     # TODO: Si es monthly, el tamaño del axis X debe ser 9 (no 10)
-    # TODO: Menor height si hay muchas series de leyendas
     def create_line_chart(
         self,
         index: int = 0,
@@ -123,7 +122,7 @@ class ExcelAutoChart:
         if columns == 1:
             chart.set_legend({'none': True})
             plot_area["layout"]["height"] += 0.10
-        elif columns > 4:
+        elif columns > 5:
             plot_area["layout"]["height"] -= 0.10
         
         if axis_title:
@@ -204,7 +203,7 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet
     
-    
+    # TODO: If COLOR == bright, change font color to black
     def create_column_chart(
         self,
         index: int,
