@@ -40,6 +40,37 @@ departamentos_codigos = {
     "Ucayali": "uca"
 }
 
+macrorregiones = {
+    "Tumbes": "Macrorregión Norte",
+    "Piura": "Macrorregión Norte",
+    "Lambayeque": "Macrorregión Norte",
+    "Cajamarca": "Macrorregión Norte",
+    "La Libertad": "Macrorregión Norte",
+    "Amazonas": "Macrorregión Norte", 
+    "San Martín": "Macrorregión Norte",
+    
+    "Loreto": "Macrorregión Norte",
+    "Ucayali": "Macrorregión Norte", 
+    
+    "Áncash": "Macrorregión Centro",
+    "Lima": "Macrorregión Centro",
+    "Huánuco": "Macrorregión Centro",
+    "Cerro de Pasco": "Macrorregión Centro",
+    "Junín": "Macrorregión Centro",
+    
+    "Ica": "Macrorregión Sur",
+    "Huancavelica": "Macrorregión Sur",
+    "Ayacucho": "Macrorregión Sur",
+    "Arequipa": "Macrorregión Sur",
+    "Cusco": "Macrorregión Sur",
+    "Apurímac": "Macrorregión Sur",
+    "Puno": "Macrorregión Sur",
+    "Madre de Dios": "Macrorregión Sur",
+    "Tacna": "Macrorregión Sur",
+    "Moquegua": "Macrorregión Sur"
+}
+
+
 def eliminar_acentos(texto):
     # Normaliza el texto en la forma NFKD (descompone los caracteres acentuados)
     texto_normalizado = unicodedata.normalize('NFKD', texto)
@@ -509,6 +540,42 @@ def uso_tecnologia_salud_xl():
         chart_creator.save_workbook()
 
 
+def becas_estudiantiles_xl():
+    departamentos = ["Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
+    code = "o11_{}"
+    file_name_base = "Ampliación de becas estudiantiles"
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", folder_name)
+    dfs = excel.worksheets_to_dataframes()
+    
+    for departamento in departamentos:
+        df_list = dfs.copy()
+        df_list[0] = convert_index_info(df_list[0], departamento)
+        code_clean = code.format(departamentos_codigos.get(eliminar_acentos(departamento), eliminar_acentos(departamento)[:3].lower()))
+
+        categories = [departamento, "Total", macrorregiones[departamento]]
+        df_list[1] = excel.filter_data(df_list[1], categories, key="row")
+        df_list[2:5] = excel.filter_data(df_list[2:5], departamento, key="row")
+        df_list[1] = excel.normalize_orientation(df_list[1])
+        for df in df_list[1:5]:
+            df.update(df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')/100)
+            
+
+        df_list[5].sort_values(by=2023, axis="index", inplace=True)
+        df_list[2:5] = excel.normalize_orientation(df_list[2:5])
+        df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
+        
+        # Charts
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
+        chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
+        chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=departamento, chart_template="bar_single")
+        chart_creator.create_table(index=6, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.save_workbook()
+
+
 # TODO: Un logging para cada save
 # Nota: todos funcionan
 if __name__ == "__main__":
@@ -520,9 +587,10 @@ if __name__ == "__main__":
     #aprovechamiento_ruta_seda() 
     #uso_masivo_telecomunicaciones_xl() 
     #bellezas_naturales_xl()
-    transicion_energias_renovables_xl()
+    #transicion_energias_renovables_xl()
     #demanda_productos_organicos_xl()
     #uso_tecnologia_salud_xl()
+    becas_estudiantiles_xl()
 
 
 
