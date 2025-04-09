@@ -129,21 +129,21 @@ class ExcelDataExtractor():
     # TODO: Raise KeyError if at least 1 selected category is not found
     def filter_data(
         self,
-        df: pd.DataFrame,
+        df: pd.DataFrame | list[pd.DataFrame],
         selected_categories: list[str] | str,
         filter_out: bool = False,
         key: Literal["row", "column"] = "column"
-    ) -> pd.DataFrame:
+    ) -> pd.DataFrame | list[pd.DataFrame]:
         """
-        Filters a DataFrame by selecting or excluding specific columns or rows.
+        Filters DataFrame(s) by selecting or excluding specific columns or rows.
 
         This function filters `df` by keeping columns or rows in `selected_categories`. 
         Alternatively, it can also filter out `selected_categories`.
 
         Parameters
         ----------
-        df : pd.DataFrame
-            The DataFrame to filter.
+        df : pd.DataFrame or list[pd.DataFrame]
+            The DataFrame(s) to filter.
         selected_categories : list[str], optional
             A list of column names or row values to include/exclude. If `None`, no filtering is applied.
         filter_out : bool, default=False
@@ -153,13 +153,15 @@ class ExcelDataExtractor():
 
         Returns
         -------
-        pd.DataFrame
-            The filtered DataFrame, including the first column.
+        pd.DataFrame or list[pd.DataFrame]
+            Filtered DataFrame(s). Returns the same type as input (single df or list).
 
         Raises
         ------
         KeyError
-            If no matching columns or rows are found.
+            If at least one column or row is not found in the df.
+        ValueError
+            If key is not "row" or "column".
 
         Examples
         --------
@@ -181,29 +183,60 @@ class ExcelDataExtractor():
         Departamento  2014  2015
         0         Lima    10    11
         """
+        is_single_df = isinstance(df, pd.DataFrame)
+        dfs = [df] if is_single_df else df.copy()
+        
+        # Normalize selected_categories to list
         if isinstance(selected_categories, str):
             selected_categories = [selected_categories]
-            
-        if key == "column":
-            cols = [df.columns[0]] # Labels are in Row 1 (headers)
-            
-            # Loop through the remaining columns and add them if they are in selected_labels and not filter_out
-            cols += [col for col in df.columns[1:] if (col in selected_categories) != filter_out]
-            filtered_df = df[cols]
-            if filtered_df.shape[1] == 1:
-                raise KeyError(f"No columns in {selected_categories} matched.")
+        
+        filtered_dfs = []
+        for df_item in dfs:
+            if key == "column":
+                missing_categories = [cat for cat in selected_categories if cat not in df_item.columns[1:]]
+                if missing_categories:
+                    raise KeyError(f"Some columns do not exist in the DataFrame, check typing: {missing_categories}")
+                
+                if not filter_out:
+                    ordered_cols = [df_item.columns[0]] + [
+                        col for col in selected_categories 
+                        if col in df_item.columns and col != df_item.columns[0]]
+                    result = df_item[ordered_cols]
+                else:
+                    # Filtrar excluyendo
+                    cols = [df_item.columns[0]] + [
+                        col for col in df_item.columns[1:] 
+                        if col not in selected_categories
+                    ]
+                    result = df_item[cols]
+                if len(cols) == 1:  # Only first column remains
+                    raise KeyError(f"No columns in {selected_categories} matched.")
+                    
+            elif key == "row":
+                # Filtrar y mantener el orden exacto de selected_categories
+                # ordered_categories = [cat for cat in selected_categories 
+                #                     if cat in df_item.iloc[:, 0].values]
+                
+                # if not ordered_categories and not filter_out:
+                #     raise KeyError(f"No rows matched: {selected_categories}")
+                missing_categories = [cat for cat in selected_categories if cat not in df_item.iloc[:, 0].values]
+                if missing_categories:
+                    raise KeyError(f"Some rows do not exist in the DataFrame, check typing: {missing_categories}")
 
+                # Crear máscara y ordenar
+                if not filter_out:
+                    result = df_item[df_item.iloc[:, 0].isin(selected_categories)]
+                    result = result.set_index(result.columns[0]).loc[selected_categories].reset_index()    
+                else:
+                    result = df_item[~df_item.iloc[:, 0].isin(selected_categories)]
+                
+                if result.empty:
+                    raise KeyError(f"No rows matched: {selected_categories}")
             
-        elif key == "row":
-            condition = df.iloc[:, 0].isin(selected_categories)
-            filtered_df = df[~condition] if filter_out else df[condition]
-            if filtered_df.empty:
-                raise KeyError(f"No rows in {selected_categories} matched.")
-
-        else:
-            raise ValueError("Must select either 'column' or 'row' as key")
-
-        return filtered_df
+            filtered_dfs.append(result)
+        
+        # Return single df if input was single, else return list
+        return filtered_dfs[0] if is_single_df else filtered_dfs
 
     
     def concat_dataframes(
@@ -278,7 +311,7 @@ class ExcelDataExtractor():
         first_col = dfs[0].columns[0]
         for df in dfs[1:]:
             if df.columns[0] != first_col:
-                raise KeyError(f"Todos los DataFrames deben tener '{first_col}' como primera columna")
+                raise KeyError(f"Todos los DataFrames deben tener el mismo nombre para la primera columna")
         
         # Renombrar las columnas para evitar duplicados
         for i, df in enumerate(dfs):
