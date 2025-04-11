@@ -5,7 +5,7 @@ from xlsxwriter.worksheet import Worksheet
 from excel_automation.classes.core.excel_writer import ExcelWriterXL
 from excel_automation.classes.utils.colors import Color
 from excel_automation.classes.utils.formats import Formats
-from typing import Literal
+from typing import Literal, Tuple
 from itertools import cycle
 from icecream import ic
 import copy
@@ -48,7 +48,44 @@ class ExcelAutoChart:
         chart.set_legend(configs["legend"])
 
         return chart
-    
+
+    def _configure_dynamic_values(self, df: pd.DataFrame)-> Tuple[dict, dict, int]:
+        "Returns legend, plot_area, sp_axis_num_format, num_font"
+        plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
+        legend = copy.deepcopy(self.format.charts["basic"]["legend"])
+        first_col_max_value = max([len(str(value)) for value in df.iloc[:,0]])
+        high_len = first_col_max_value > 5
+        columns = df.shape[1] - 1
+
+        if columns == 1:
+            legend = {'none': True}
+            plot_area["layout"]["height"] += 0.10
+        elif columns > 5:
+            plot_area["layout"]["height"] -= 0.11
+            # legend = {
+            #     "layout": {
+            #         'x':      0.09,
+            #         'y':      0.90,
+            #         'width':  0.85,
+            #         'height': 0.19
+            #         }
+            #     }
+
+        if high_len:
+            plot_area["layout"]["height"] -= 0.05
+        if first_col_max_value >= 9:
+            plot_area["layout"]["height"] -= 0.04
+        if first_col_max_value >= 13:
+            plot_area["layout"]["height"] -= 0.03
+
+        sp_axis_num_format = '0' if not isinstance(df.iloc[0,0], pd.Timestamp) else 'mmm-yy'
+        num_font = {
+            'size': 9 if high_len else 10,
+            'rotation': -30 if high_len else 0
+            }
+        
+        return legend, plot_area, sp_axis_num_format, num_font
+            
     def _configure_axis(self, num_format: str):
         # Axis configuration
         if num_format in ('0', '0.0', '0.00'):
@@ -58,6 +95,7 @@ class ExcelAutoChart:
         else:
             axis_type = num_format
         return axis_type
+    
  
     # TODO: Data labels position (automatically?)
     # TODO: Implement manual logic for specific series (i.e. Peru series solid) if column.name == Peru
@@ -95,10 +133,6 @@ class ExcelAutoChart:
         Worksheet
             The worksheet with the inserted chart.
 
-        Raises
-        ------
-        ValueError
-            If the DataFrame is empty or if an invalid chart_type is provided.
         """
         # Initialize configurations
         configs = self.format.charts[chart_template]
@@ -108,28 +142,18 @@ class ExcelAutoChart:
         # Writing to sheet
         df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
         self.sheet_list.append(sheet_name)
-
-        # Check if the DataFrame is empty
-        if df.empty:
-            raise ValueError("DataFrame is empty. No data to plot.")
         
         # Load predefined formats
         chart = self._create_base_chart('line')
         
-        # Set legend based on number of columns (series) and modify plotarea
-        plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
-        columns = df.shape[1] - 1
-        if columns == 1:
-            chart.set_legend({'none': True})
-            plot_area["layout"]["height"] += 0.10
-        elif columns > 5:
-            plot_area["layout"]["height"] -= 0.10
-        
+        # Load dynamically modified formats
+        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
 
-        # Override base chart configurations
+        # Modify predefined formats
+        chart.set_legend(legend)
         chart.set_plotarea(plot_area)
         if "size" in configs:
             chart.set_size(configs["size"])
@@ -137,7 +161,6 @@ class ExcelAutoChart:
         # Add data series with color scheme
         for idx, col in enumerate(df.columns[1:]):
             col_letter = chr(66 + idx)  # Get column letter (e.g., B, C, D, ...)
-            #print(f"Adding series for column {col}: {col_letter}")  # Debug
             current_color = str(next(color_cycle))
 
             marker_config = {
@@ -179,19 +202,21 @@ class ExcelAutoChart:
             chart.add_series(series_params)
 
         # Axis configuration
-        axis_format = self._configure_axis(num_format)
+        axis_num_format = self._configure_axis(num_format)
 
         chart.set_y_axis({
             **self.format.charts['basic']["y_axis"],
             **configs.get('y_axis', {}),
             'name': axis_title,
-            'num_format': axis_format
+            'num_format': axis_num_format
         })
         
+
         chart.set_x_axis({
             **self.format.charts['basic']["x_axis"],
             **configs.get('x_axis', {}),
-            'num_format': '0' if not isinstance(df.iloc[0,0], pd.Timestamp) else 'mmm-yy',
+            'num_format': sp_axis_num_format,
+            'num_font': num_font
         })
 
         # Insert chart with proper positioning
@@ -203,6 +228,7 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet
     
+
     # TODO: If COLOR == bright, change font color to black
     def create_column_chart(
         self,
@@ -265,39 +291,18 @@ class ExcelAutoChart:
         }
         subtype = subtype_map.get(grouping, 'clustered')
 
-        # Predefined formats
+        # Load predefined formats
         chart = self._create_base_chart('column', subtype)
 
-        # Set legend based on number of columns (series) and modify plotarea
-        plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
-        columns = df.shape[1] - 1
-        if columns == 1:
-            chart.set_legend({'none': True})
-            plot_area["layout"]["height"] += 0.10
-        elif columns > 4:
-            plot_area["layout"]["height"] -= 0.10
-            chart.set_legend({
-                "layout": {
-                    'x':      0.09,
-                    'y':      0.90,
-                    'width':  0.85,
-                    'height': 0.19
-                    }
-                }
-            )
-        
+        # Load dynamically modified formats
+        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
 
-        # Override base chart configurations
+        # Modify predefined formats
+        chart.set_legend(legend)
         chart.set_plotarea(plot_area)
-        if "size" in configs:
-            chart.set_size(configs["size"])
-
-        # Override base chart configurations
-        chart.set_plotarea(plot_area)
-
         if "size" in configs:
             chart.set_size(configs["size"])
 
@@ -338,7 +343,8 @@ class ExcelAutoChart:
         chart.set_x_axis({
             **self.format.charts['basic']["x_axis"],
             **configs.get('x_axis', {}),
-            'num_format': '@',
+            'num_format': sp_axis_num_format,
+            'num_font': num_font
         })
 
         # Insert chart with proper positioning
@@ -419,24 +425,19 @@ class ExcelAutoChart:
         # Load predefined formats
         chart = self._create_base_chart('bar', subtype)
 
-        # Modify plotarea
-        plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
-        plot_area["layout"]["x"] += 0.10
-        plot_area["layout"]["width"] -= 0.10
-        plot_area["layout"]["height"] += 0.10
-
-        # Set legend based on number of columns (series)
-        if df.shape[1] < 3:
-            chart.set_legend({'none': True})
-            plot_area["layout"]["height"] += 0.10
-        
+        # Load dynamically modified formats
+        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
+        plot_area["layout"]["x"] += plot_area["layout"]["height"] - self.format.charts["basic"]["plotarea"]["layout"]["height"]
+        plot_area["layout"]["height"] = self.format.charts["basic"]["plotarea"]["layout"]["height"]
+        plot_area["layout"]["height"] += 0.20
+        #plot_area["layout"]["width"] -= 0.10
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
 
-        # Override base chart configurations
+        # Modify predefined formats
+        chart.set_legend(legend)
         chart.set_plotarea(plot_area)
-
         if "size" in configs:
             chart.set_size(configs["size"])
 
@@ -451,7 +452,7 @@ class ExcelAutoChart:
                 for row_idx in range(df.shape[0]):
                     category_value = df.iloc[row_idx, 0]
                     if category_value == highlighted_category:
-                        points.append({'fill': {'color': Color.RED}})
+                        points.append({'fill': {'color': Color.RED_DARK}})
                     else:
                         points.append({'fill': {'color': current_color}})
                     
@@ -485,7 +486,10 @@ class ExcelAutoChart:
             **self.format.charts['basic']["x_axis"], # Inverted
             **configs.get('y_axis', {}),
             'num_format': axis_format,
+            # 'num_format': sp_axis_num_format,
+            # 'num_font': num_font
             })
+        
 
         # Insert chart with proper positioning
         position = 'E3' if len(df.columns[1:]) < 4 else 'J3'
