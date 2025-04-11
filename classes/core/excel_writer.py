@@ -88,7 +88,8 @@ class ExcelWriterXL:
             A tuple containing the written DataFrame and the xlsxwriter Worksheet object
         """
         worksheet = self._ensure_worksheet_exists(sheet_name)
-        
+        df = df.infer_objects(copy=False).fillna("")
+
         if format_template == "database":
             self.formatter.apply_database_format(worksheet, df, num_format)
         elif format_template == "data_table":

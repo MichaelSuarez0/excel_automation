@@ -1,10 +1,13 @@
 from enum import Enum
 
 # TODO: DIFFERENT GRAY FOR BORDERS AND GRIDLINES
+# TODO: Para grids más light
+# TODO: UN poco más oscuro blue_light
 class Color(str, Enum):
-    RED: str = "#be0000"
+    RED_DARK: str = "#be0000"
+    RED: str = '#d41225'
     RED_LIGHT: str = "#FFABAB"
-    BLUE_LIGHT: str = "#9AC2E6"
+    BLUE_LIGHT: str = "#6499DA"
     BLUE: str = "#0060a4"
     BLUE_DARK: str = "#00194b"
     GREEN_DARK: str = "#007630"

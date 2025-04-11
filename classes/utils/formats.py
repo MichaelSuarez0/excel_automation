@@ -36,7 +36,7 @@ class Formats(BaseModel):
     @cached_property
     def charts(self) -> dict[
         Literal[
-            'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 
+            'basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 
             'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
@@ -197,13 +197,15 @@ class ChartFormats:
         self._line_colors = [
             Color.RED, 
             Color.BLUE_DARK, 
-            Color.ORANGE, 
-            Color.GREEN_DARK, 
+            Color.GREEN_DARK,
+            Color.ORANGE,
+            Color.BLUE,
+            Color.GRAY,
+            Color.YELLOW,
             Color.PURPLE, 
-            Color.GRAY
         ]
         self._line_simple_colors = [
-            Color.RED, 
+            Color.RED_DARK, 
             Color.BLUE_DARK,
             Color.BLUE, 
         ]
@@ -212,7 +214,7 @@ class ChartFormats:
         ]
         self._column_colors = [
             Color.BLUE_DARK, 
-            Color.RED, 
+            Color.RED_DARK, 
             Color.BLUE, 
             Color.GREEN_DARK, 
             Color.ORANGE, 
@@ -221,18 +223,18 @@ class ChartFormats:
         ]
         self._column_simple_colors = [
             Color.BLUE_DARK, 
-            Color.RED, 
+            Color.RED_DARK, 
             Color.GRAY
         ]
         self._column_percent_stacked_colors = [
             Color.GREEN_DARK, 
             Color.BLUE, 
             Color.BLUE_DARK,
-            Color.RED,
+            Color.RED_DARK,
             Color.GRAY
         ]
         self._bar_colors = [
-            Color.RED, 
+            Color.RED_DARK, 
             Color.BLUE_DARK, 
             Color.YELLOW
         ]
@@ -296,7 +298,7 @@ class ChartFormats:
         return {
             'colors': self._line_colors,
             'dash_type': [
-                'square_dot', 'round_dot', 'round_dot', 'round_dot',
+                'solid', 'round_dot', 'round_dot', 'round_dot',
                 'round_dot', 'round_dot', 'round_dot'
             ],
             'series': {

@@ -9,7 +9,6 @@ from string import Template
 import pandas as pd
 import unicodedata
 
-
 folder_name: str = "oportunidades"
 departamentos_codigos = {
     "Amazonas": "ama",
@@ -131,9 +130,9 @@ def brecha_digital_xl():
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="decimal_1", highlighted_category="América del Sur",
                                         chart_template="bar_single")
         chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="decimal_1", chart_template="line",
-                                        custom_colors=[Color.BLUE_DARK, Color.RED, Color.ORANGE, Color.GREEN_DARK])
+                                        custom_colors=[Color.BLUE_DARK, Color.RED_DARK, Color.ORANGE, Color.GREEN_DARK])
         chart_creator.create_column_chart(index=3, sheet_name="Fig3", grouping="stacked", chart_template="column_stacked", numeric_type="decimal_2",
-                                          custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.GREEN_DARK, Color.RED, Color.ORANGE, Color.YELLOW, Color.GRAY])
+                                          custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.GREEN_DARK, Color.RED_DARK, Color.ORANGE, Color.YELLOW, Color.GRAY])
         chart_creator.create_line_chart(index=4, sheet_name="Fig4", numeric_type="decimal_1", chart_template="line_simple")
         chart_creator.create_table(index=5, sheet_name="Tab1")
         chart_creator.save_workbook()
@@ -274,7 +273,7 @@ def uso_tecnologia_educacion_xl():
     # Falta Lima Metropolitana
     departamentos = ["Lima", "Apurimac", "Moquegua", "Tacna", "Ancash", "Arequipa", "La Libertad", "Ica", "Tumbes", "Callao"]
     file_name_base = "o99_{} - Uso de la tecnologia e innovación en educación"
-    colors = [Color.BLUE_DARK, Color.RED, Color.GREEN_DARK, Color.ORANGE, Color.PURPLE, Color.BLUE]
+    colors = [Color.BLUE_DARK, Color.RED_DARK, Color.GREEN_DARK, Color.ORANGE, Color.PURPLE, Color.BLUE]
 
     # ETL
     excel = ExcelDataExtractor("Oportunidad - Uso de la tecnología e innovación en educación", folder_name)
@@ -349,7 +348,7 @@ def uso_masivo_telecomunicaciones_xl():
     # Variables
     # Falta Lima metropolitana
     departamentos = ["Lima Región", "Callao", "Áncash", "Pasco", "Junín", "Ayacucho", "Cusco"]
-    custom_colors = [Color.RED, Color.BLUE]
+    custom_colors = [Color.RED_DARK, Color.BLUE]
 
     años = list(range(2012, 2023, 2)) + [2023]
     file_name_base = "o99_{} - Uso masivo de las telecomunicaciones e internet"
@@ -532,7 +531,8 @@ def uso_tecnologia_salud_xl():
         # Charts
         chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
-        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line")
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line", custom_colors=[
+            Color.RED, Color.ORANGE, Color.GREEN_DARK, Color.BLUE_DARK, Color.BLUE])
         chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="decimal_1", chart_template="line_single")
         chart_creator.create_bar_chart(index=3, sheet_name="Fig3", numeric_type="integer", chart_template="bar_single", highlighted_category=departamento)
         chart_creator.create_column_chart(index=4, sheet_name="Fig4", numeric_type="integer", chart_template="column_single")
@@ -541,13 +541,16 @@ def uso_tecnologia_salud_xl():
 
 
 def becas_estudiantiles_xl():
-    departamentos = ["Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
+    #departamentos = ["Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
+    departamentos = ["Arequipa"]
     code = "o11_{}"
     file_name_base = "Ampliación de becas estudiantiles"
 
     # ETL
     excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", folder_name)
     dfs = excel.worksheets_to_dataframes()
+    dfs[6] = excel.filter_data(dfs[6], "Total", filter_out=True, key="row")
+    dfs[6] = excel.normalize_orientation(dfs[6])
     
     for departamento in departamentos:
         df_list = dfs.copy()
@@ -572,9 +575,11 @@ def becas_estudiantiles_xl():
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
         chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
         chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=departamento, chart_template="bar_single")
-        chart_creator.create_table(index=6, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.create_column_chart(index=6, sheet_name="Fig4", numeric_type="percentage", grouping="percentStacked", chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.BLUE_LIGHT])
+        chart_creator.create_table(index=7, sheet_name="Tab1", chart_template="text_table")
         chart_creator.save_workbook()
 
+# python -m excel_automation.scripts.oportunidades_xl
 
 # TODO: Un logging para cada save
 # Nota: todos funcionan
@@ -589,10 +594,6 @@ if __name__ == "__main__":
     #bellezas_naturales_xl()
     #transicion_energias_renovables_xl()
     #demanda_productos_organicos_xl()
-    #uso_tecnologia_salud_xl()
-    becas_estudiantiles_xl()
-
-
-
-    
+    uso_tecnologia_salud_xl()
+    #becas_estudiantiles_xl()
     
