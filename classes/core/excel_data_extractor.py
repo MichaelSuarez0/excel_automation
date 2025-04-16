@@ -21,7 +21,7 @@ class ExcelDataExtractor():
             If provided, this path (starting from base dir) is used instead of constructing a path based on 'databases' + 'folder'.
         """
         if custom_path:
-            self.file_path = os.path.join(script_dir, "..", "..", custom_path,  f'{file_name}.xlsx')
+            self.file_path = os.path.join(custom_path,  f'{file_name}.xlsx')
         else:
             self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
         self.output_path = os.path.join(script_dir, "..", "..", "products")
@@ -411,6 +411,3 @@ class ExcelDataExtractor():
                 df.to_excel(writer, sheet_name=sheet_name, index=False)
    
     # TODO: Use sheet index instead of name
-
-
-

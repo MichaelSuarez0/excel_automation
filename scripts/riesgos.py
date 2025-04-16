@@ -51,5 +51,8 @@ def inmanejable_inflacion_departamental():
 
 
 if __name__ == "__main__":
+    # from observatorio_ceplan import Observatorio
+    # obs = Observatorio()
+    # print(obs.get_code_classification("t5"))
     inmanejable_inflacion_departamental()
     

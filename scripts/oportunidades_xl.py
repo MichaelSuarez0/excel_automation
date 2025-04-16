@@ -1,3 +1,4 @@
+from observatorio_ceplan import Observatorio, Departamentos
 from excel_automation import Color
 from excel_automation import ExcelDataExtractor
 from excel_automation import ExcelAutoChart
@@ -8,37 +9,8 @@ import os
 from string import Template
 import pandas as pd
 import unicodedata
-from observatorio_ceplan import Departamentos
 
 folder_name: str = "oportunidades"
-departamentos_codigos = {
-    "Amazonas": "ama",
-    "Ancash": "an",
-    "Apurímac": "apu",
-    "Arequipa": "are",
-    "Ayacucho": "aya",
-    "Cajamarca": "caj",
-    "Callao": "callao",
-    "Cusco": "cus",
-    "Huancavelica": "hcv",
-    "Huanuco": "hnc",
-    "Ica": "ica",
-    "Junin": "jun",
-    "La Libertad": "lali",
-    "Lambayeque": "lamb",
-    "Lima Metropolitana": "lmt",
-    "Lima Region": "lim",
-    "Loreto": "lore",
-    "Madre de Dios": "madre",
-    "Moquegua": "moq",
-    "Pasco": "pas",
-    "Piura": "piu",
-    "Puno": "pun",
-    "San Martin": "smt",
-    "Tacna": "tac",
-    "Tumbes": "tum",
-    "Ucayali": "uca"
-}
 
 macrorregiones = {
     "Tumbes": "Macrorregión Norte",
@@ -70,6 +42,26 @@ macrorregiones = {
     "Moquegua": "Macrorregión Sur"
 }
 
+observatorio = Observatorio()
+rubros_subrubros = observatorio.load_info_obs()
+oportunidades_territoriales = observatorio.load_info_obs_subset(rubro="oportunidades", subrubro="territorial")
+code_raw = "o{}_{}"
+
+def get_code_from_titulo(code_dpto: str, file_name_base: str)-> str:
+    code_found = False
+    for full_code, details in oportunidades_territoriales.items():
+        if code_dpto == full_code.split("_")[-1]:
+            code_found = True
+            titulo_largo = details["titulo_largo"]
+            if file_name_base.lower() in titulo_largo.lower() or titulo_largo.lower() in file_name_base.lower():
+                return full_code
+        
+    if not code_found:
+        raise IndexError(f"'{code_dpto}' does not match with any codes in oportunidades territoriales")
+    else:
+        return code_raw.format(11, code_dpto)
+        #raise IndexError(f"'{file_name_base}' does not match with any title for codes ending in '{code_dpto}'")
+    #return code_raw.format(11, code_dpto)
 
 def eliminar_acentos(texto):
     # Normaliza el texto en la forma NFKD (descompone los caracteres acentuados)
@@ -545,9 +537,8 @@ def uso_tecnologia_salud_xl():
 
 
 def becas_estudiantiles_xl():
-    #departamentos = ["Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
-    departamentos = ["Arequipa"]
-    code = "o11_{}"
+    departamentos = ["Arequipa", "Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
+    #departamentos = ["Arequipa"]
     file_name_base = "Ampliación de becas estudiantiles"
 
     # ETL
@@ -559,7 +550,7 @@ def becas_estudiantiles_xl():
     for dpto in departamentos:
         df_list = dfs.copy()
         df_list[0] = convert_index_info(df_list[0], dpto)
-        code_clean = code.format(Departamentos.get_codigo(dpto))
+        code_clean = get_code_from_titulo(Departamentos.get_codigo(dpto), file_name_base)
 
         categories = [dpto, "Total", macrorregiones[dpto]]
         df_list[1] = excel.filter_data(df_list[1], categories, key="row")
@@ -574,14 +565,15 @@ def becas_estudiantiles_xl():
         df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
         
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
-        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
-        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
-        chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
-        chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=dpto, chart_template="bar_single")
-        chart_creator.create_column_chart(index=6, sheet_name="Fig4", numeric_type="percentage", grouping="percentStacked", chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.BLUE_LIGHT])
-        chart_creator.create_table(index=7, sheet_name="Tab1", chart_template="text_table")
-        chart_creator.save_workbook()
+        # chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        # chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        # chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
+        # chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
+        # chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=dpto, chart_template="bar_single")
+        # chart_creator.create_column_chart(index=6, sheet_name="Fig4", numeric_type="percentage", grouping="percentStacked", chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.BLUE_LIGHT])
+        # chart_creator.create_table(index=7, sheet_name="Tab1", chart_template="text_table")
+        # chart_creator.save_workbook()
+        ic(code_clean)
 
 # python -m excel_automation.scripts.oportunidades_xl
 
@@ -598,6 +590,6 @@ if __name__ == "__main__":
     #bellezas_naturales_xl()
     #transicion_energias_renovables_xl()
     #demanda_productos_organicos_xl()
-    uso_tecnologia_salud_xl()
-    #becas_estudiantiles_xl()
+    #uso_tecnologia_salud_xl()
+    becas_estudiantiles_xl()
     

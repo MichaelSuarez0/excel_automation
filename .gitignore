@@ -165,3 +165,4 @@ old_scripts/
 macros/
 products/
 databases/otros/
+classes/core/excel_polars_extractor.py
