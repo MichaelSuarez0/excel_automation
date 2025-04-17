@@ -575,7 +575,47 @@ def becas_estudiantiles_xl():
         # chart_creator.save_workbook()
         ic(code_clean)
 
-# python -m excel_automation.scripts.oportunidades_xl
+
+def comunidades_nativas_campesinas():
+    departamentos = ["Junín", "Lambayeque", "Ucayali", "Tumbes", "Loreto", "La Libertad", "Amazonas"]
+    departamentos = ["Junín"]
+    file_name_base = "Preservación de conocimientos bioculturales de comunidades nativas y campesinas"
+
+    # ETL
+    excel = ExcelDataExtractor(f"Oportunidad - {file_name_base}", folder_name)
+    dfs = excel.worksheets_to_dataframes()
+    ic(dfs[1])
+    dfs[1] = excel.filter_data(dfs[1], "Absoluto", key="column")
+    dfs[1] = excel.filter_data(dfs[1], "Total", filter_out=True, key="row")
+    dfs[1] = dfs[1].sort_values(by="Absoluto", ascending=True)
+    # dfs[1] = dfs[1].iloc[1:,:]
+    # dfs[1] = excel.normalize_orientation(dfs[1])
+    
+    for dpto in departamentos:
+        df_list = dfs.copy()
+        df_list[0] = convert_index_info(df_list[0], dpto)
+        code_clean = get_code_from_titulo(Departamentos.get_codigo(dpto), file_name_base)
+        
+
+        # categories = [dpto, "Total", macrorregiones[dpto]]
+        # df_list[1] = excel.filter_data(df_list[1], categories, key="row")
+        # df_list[2:5] = excel.filter_data(df_list[2:5], dpto, key="row")
+        # df_list[1] = excel.normalize_orientation(df_list[1])
+        # for df in df_list[1:5]:
+        #     df.update(df.iloc[:, 1:].apply(pd.to_numeric, errors='coerce')/100)
+            
+
+        # df_list[5].sort_values(by=2023, axis="index", inplace=True)
+        # df_list[2:5] = excel.normalize_orientation(df_list[2:5])
+        # df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
+        
+        # Charts
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, "Preservacion de conocimientos bioculturales"))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, chart_template="bar_single")
+        chart_creator.save_workbook()
+
+
 
 # TODO: Un logging para cada save
 # Nota: todos funcionan
@@ -591,5 +631,6 @@ if __name__ == "__main__":
     #transicion_energias_renovables_xl()
     #demanda_productos_organicos_xl()
     #uso_tecnologia_salud_xl()
-    becas_estudiantiles_xl()
+    #becas_estudiantiles_xl()
+    comunidades_nativas_campesinas()
     
