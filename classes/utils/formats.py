@@ -261,7 +261,7 @@ class ChartFormats:
     def _basic(self):
         return {
             'title': {'name': ''},
-            'size': {'width': 580, 'height': 300},
+            'size': {'width': 600, 'height': 300},
             'legend': {'position': 'bottom'}   
             #     'layout': {
             #         'x': 0.20,

@@ -198,10 +198,10 @@ class ExcelDataExtractor():
                     raise KeyError(f"Some columns do not exist in the DataFrame, check typing: {missing_categories}")
                 
                 if not filter_out:
-                    ordered_cols = [df_item.columns[0]] + [
+                    cols = [df_item.columns[0]] + [
                         col for col in selected_categories 
                         if col in df_item.columns and col != df_item.columns[0]]
-                    result = df_item[ordered_cols]
+                    result = df_item[cols]
                 else:
                     # Filtrar excluyendo
                     cols = [df_item.columns[0]] + [
