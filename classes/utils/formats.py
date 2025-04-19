@@ -1,4 +1,4 @@
-from excel_automation.classes.utils.colors import Color
+from .colors import Color
 from typing import Any, Literal
 from functools import cached_property
 from pydantic import BaseModel, Field

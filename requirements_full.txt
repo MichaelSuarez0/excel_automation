@@ -1,8 +1,10 @@
+ceplan_utilities==0.1
+correos_automaticos==0.1
 icecream==2.1.4
 numpy==2.2.4
+observatorio_ceplan==0.1.0
 openpyxl==3.1.5
 pandas==2.2.3
-polars==1.25.2
-pydantic==2.10.6
-xlsxwriter==3.2.2
-xlwings==0.33.11
+pydantic==2.11.3
+sympy==1.13.3
+XlsxWriter==3.2.2

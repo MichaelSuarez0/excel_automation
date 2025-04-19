@@ -2,10 +2,10 @@ import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.core.excel_formatter import ExcelFormatter
-from excel_automation.classes.utils.formats import Formats
+from .excel_formatter import ExcelFormatter
+from ..utils import Formats
 from typing import Tuple, Literal
-import numpy as np
+
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 save_dir = os.path.join(script_dir, "..", "..", "products")

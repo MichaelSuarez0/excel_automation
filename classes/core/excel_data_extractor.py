@@ -1,8 +1,6 @@
 import os
 import pandas as pd
-import openpyxl
-import pandas as pd
-from typing import Literal, Optional
+from typing import Literal
 
 script_dir = os.path.abspath(os.path.dirname(__file__))
 
@@ -14,41 +12,18 @@ class ExcelDataExtractor():
         Parameters
         ----------
         file_name : str
-                The name of the Excel file to be loaded (from databases folder)
+            The name of the Excel file to be loaded (from databases folder)
         folder : str, optional:
             Folder name inside "databases" where file is located (defaults to "otros")
         custom_path : str, optional
-            If provided, this path (starting from base dir) is used instead of constructing a path based on 'databases' + 'folder'.
+            If provided, this path is used instead of constructing a path based on 'databases' + 'folder'.
         """
         if custom_path:
             self.file_path = os.path.join(custom_path,  f'{file_name}.xlsx')
         else:
             self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
         self.output_path = os.path.join(script_dir, "..", "..", "products")
-        self.wb = None
-        self.ws = None
-        self.load_workbook()
-    
-    def load_workbook(self):
-        self.wb = openpyxl.load_workbook(self.file_path)
-        # Access different worksheets with self.wb.sheetnames[int]
-        self.ws= self.wb.active
-    
-    @property
-    def sheet_names(self) -> list: 
-        """Devuelve una lista de los nombres de las hojas."""
-        print("Sheet names:")
-        for sheet_name in self.wb.sheetnames:
-            print(f"- {sheet_name}")
-        return self.wb.sheetnames
-
-    @property
-    def count_sheets(self) -> int:
-        count = len(self.wb.sheetnames)
-        print(f'The workbook has {count} sheets.')
-        return count
-    
-    # Reading methods
+        
     def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         # Remove rows/columns that are completely empty, then replace NaN with ""
         df = df.dropna(axis=0, thresh=1).dropna(axis=1, thresh=1).fillna("")
@@ -69,7 +44,8 @@ class ExcelDataExtractor():
         sheet_index : int, optional
             The index of the worksheet to read. If not provided, the first sheet is used.
         """
-        sheet_name = self.wb.sheetnames[sheet_index] if sheet_index is not None else self.wb.sheetnames[0]
+        sheet_names = pd.ExcelFile(self.file_path).sheet_names
+        sheet_name = sheet_names[sheet_index] if sheet_index is not None else sheet_names[0]
         df = pd.read_excel(self.file_path, sheet_name=sheet_name)
         return self._preprocess_dataframe(df)
 
@@ -83,7 +59,8 @@ class ExcelDataExtractor():
             Whether to include the first worksheet. By default, the first worksheet is skipped.
         """
         dfs_dict = pd.read_excel(self.file_path, sheet_name=None) # This pandas funct returns a dictionary: {sheet_name: DataFrame}
-        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys()) # Select the sheet names based on whether the first sheet should be included
+        # Select the sheet names based on whether the first sheet should be included
+        sheet_names = list(dfs_dict.keys())[1:] if not include_first else list(dfs_dict.keys()) 
         return [self._preprocess_dataframe(dfs_dict[name]) for name in sheet_names]
     
     # Transformation methods

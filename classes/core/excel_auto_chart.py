@@ -2,12 +2,10 @@ import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
-from excel_automation.classes.core.excel_writer import ExcelWriterXL
-from excel_automation.classes.utils.colors import Color
-from excel_automation.classes.utils.formats import Formats
+from .excel_writer import ExcelWriterXL
+from ..utils import Color, Formats
 from typing import Literal, Tuple
 from itertools import cycle
-from icecream import ic
 import copy
 
 script_dir = os.path.abspath(os.path.dirname(__file__))

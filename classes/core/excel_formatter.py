@@ -1,15 +1,9 @@
-import os
-from re import M
 import pandas as pd
-from excel_automation.classes.utils.colors import Color
-from excel_automation.classes.utils.formats import Formats
+from ..utils import Color, Formats
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 import numpy as np
 import copy
-
-script_dir = os.path.abspath(os.path.dirname(__file__))
-save_dir = os.path.join(script_dir, "..", "..", "products")
 
 # Ideally should only receive Wb, Ws and Formats
 class ExcelFormatter:
