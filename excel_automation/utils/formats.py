@@ -1,7 +1,7 @@
 from .colors import Color
 from typing import Any, Literal
 from functools import cached_property
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
 from enum import Enum
 
 class Alignment(str, Enum):
@@ -11,20 +11,21 @@ class Alignment(str, Enum):
     justify = 'justify'
 
 
-class CellConfig(BaseModel):
+@dataclass
+class CellConfig:
     bg_color: str
     font_color: str
-    font_size: int = Field(..., gt=0, description="El tamaño de la fuente debe ser mayor que 0")
-    bold: bool = False
+    font_size: int
+    bold: bool
     align: Alignment
     valign: Alignment
     num_format: str
-    border: int = Field(..., ge=0, description="El grosor del borde debe ser 0 o mayor")
+    border: int
     border_color: str
     text_wrap: bool = False
 
-
-class Formats(BaseModel):
+@dataclass
+class Formats():
     @cached_property
     def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return NumericTypes().numeric_types

@@ -1,4 +1,4 @@
-from excel_automation.classes.core.excel_data_extractor import ExcelDataExtractor
+from excel_automation.excel_automation.core.excel_data_extractor import ExcelDataExtractor
 import os
 import pandas as pd
 from icecream import ic

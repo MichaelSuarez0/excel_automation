@@ -5,7 +5,7 @@ from functools import wraps
 import pandas as pd
 from string import Template
 from typing import Callable, Tuple
-from excel_automation.classes.utils.colors import Color
+from excel_automation.excel_automation.utils.colors import Color
 
 
 def sustituir_departamento(text, departamento):

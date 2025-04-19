@@ -1,11 +1,9 @@
+import os
 from observatorio_ceplan import Observatorio, Departamentos
-from excel_automation import Color
-from excel_automation import ExcelDataExtractor
-from excel_automation import ExcelAutoChart
+from excel_automation import ExcelDataExtractor, ExcelAutoChart, Color 
 from typing import Tuple
 from itertools import cycle
 from icecream import ic
-import os
 from string import Template
 import pandas as pd
 import unicodedata
