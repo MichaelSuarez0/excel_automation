@@ -7,12 +7,8 @@ from ..utils import Formats
 from typing import Tuple, Literal
 
 
-script_dir = os.path.abspath(os.path.dirname(__file__))
-save_dir = os.path.join(script_dir, "..", "..", "products")
-
-
 class ExcelWriterXL:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "automated_report", output_folder: str = "otros"):
+    def __init__(self, df_list: list[pd.DataFrame], output_name: str, output_folder: str):
         """
         A class for writing multiple pandas DataFrames to Excel files with customized formatting.
         Uses xlsxwriter as the underlying engine and works with the ExcelFormatter class for styling.
@@ -21,10 +17,10 @@ class ExcelWriterXL:
         ----------
         df_list : list[pd.DataFrame]
             List of pandas DataFrames to be written to the Excel file
-        output_name : str, optional
-            Name of the output Excel file without extension, defaults to "automated_excel"
-        output_folder : str, optional
-            Subfolder inside the "products" directory where the file will be saved, defaults to "otros"
+        output_name : str
+            Name of the output Excel file without extension
+        output_folder : str
+            Subfolder inside the "products" directory where the file will be saved
             
         Attributes
         ----------
@@ -37,14 +33,14 @@ class ExcelWriterXL:
         df_list : list[pd.DataFrame]
             The list of DataFrames to be written
         """
-        output_path = os.path.join(save_dir, output_folder, f'{output_name}.xlsx') ; os.makedirs(os.path.dirname(output_path), exist_ok=True)
-        self.output_name = output_name
-        self.writer = pd.ExcelWriter(output_path, engine='xlsxwriter')
+        self.output_path = os.path.join(output_folder, f"{output_name}.xlsx")
+        self.writer = pd.ExcelWriter(self.output_path, engine='xlsxwriter')
         self.formatter = ExcelFormatter(df_list, self.writer)
         self.format = Formats()
         self.workbook: Workbook = self.writer.book
         self.sheet_list = []
         self.df_list = df_list
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
     
     def _ensure_worksheet_exists(self, sheet_name: str) -> Worksheet:
         if sheet_name in self.writer.sheets:
@@ -121,4 +117,4 @@ class ExcelWriterXL:
         
     def save_workbook(self):
         self.writer.close()
-        print(f'✅ Excel guardado como "{self.output_name}"')
+        print(f'✅ Excel guardado en "{self.output_path}"')

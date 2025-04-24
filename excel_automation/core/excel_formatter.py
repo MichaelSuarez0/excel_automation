@@ -5,7 +5,7 @@ from xlsxwriter.worksheet import Worksheet
 import numpy as np
 import copy
 
-# Ideally should only receive Wb, Ws and Formats
+
 class ExcelFormatter:
     def __init__(self, df_list: list[pd.DataFrame], writer: pd.ExcelWriter):
         """

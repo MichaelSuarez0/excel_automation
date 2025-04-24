@@ -1,4 +1,3 @@
-import os
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
@@ -8,26 +7,23 @@ from typing import Literal, Tuple
 from itertools import cycle
 import copy
 
-script_dir = os.path.abspath(os.path.dirname(__file__))
-save_dir = os.path.join(script_dir, "..", "..", "charts")
 
 # TODO: Use worksheet.dim_colmax
 class ExcelAutoChart:
-    def __init__(self, df_list: list[pd.DataFrame], output_name: str = "ExcelAutoChart", output_folder: str = "otros"):
+    def __init__(self, df_list: list[pd.DataFrame], output_name: str, output_folder: str):
         """Class to write to Excel files from DataFrames and creating charts. Engine: xlsxwriter
 
         Parameters
         ----------
         df_list : list(pd.DataFrame):
             Data that will be written to Excel
-        output_name : str, optional: 
-            File name for the output file. Defaults to "ExcelAutoChart".
-        output_folder : str, optional:
+        output_name : str: 
+            File name for the output file.
+        output_folder : str:
             Folder name inside "products" to save the file in.
         """
         self.df_list = df_list
         self.writer = ExcelWriterXL(df_list, output_name, output_folder)
-        #self.formatter = ExcelFormatter(df_list, output_name, output_folder)
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
         self.sheet_count = 0
@@ -103,7 +99,7 @@ class ExcelAutoChart:
         index: int = 0,
         sheet_name: str = "LineChart",
         numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
-        chart_template: Literal['line', 'line_simple', 'line_single', 'line_monthly'] = "line",
+        template: Literal['line', 'line_simple', 'line_single', 'line_monthly'] = "line",
         axis_title: str = "",
         custom_colors: list[Color] | None = None
     ) -> Worksheet:
@@ -133,7 +129,7 @@ class ExcelAutoChart:
 
         """
         # Initialize configurations
-        configs = self.format.charts[chart_template]
+        configs = self.format.charts[template]
         color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
         num_format = self.format.numeric_types[numeric_type]
         
@@ -185,7 +181,7 @@ class ExcelAutoChart:
                     'position': configs['series']['data_labels'].get('position', 'above'),
                     'num_format': num_format,
                     'fill': {'color': Color.BLUE_LIGHT,
-                             'transparency': 100 if chart_template != "line_single" else 0},
+                             'transparency': 100 if template != "line_single" else 0},
                     'font':{'color': configs['series']['data_labels'].get('font', {}).get('color', current_color),
                             'size': configs['series']['data_labels'].get('font', {}).get('size', 10),
                             'bold': configs['series']['data_labels'].get('font', {}).get('bold', False)},
@@ -234,7 +230,7 @@ class ExcelAutoChart:
         sheet_name: str,
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        chart_template: Literal['column', 'column_simple', 'column_stacked', 'column_single'] = "column",
+        template: Literal['column', 'column_simple', 'column_stacked', 'column_single'] = "column",
         axis_title: str = "",
         custom_colors: list[str] | None = None
     ) -> Worksheet:
@@ -269,7 +265,7 @@ class ExcelAutoChart:
             If the DataFrame is empty or if an invalid chart_template is provided.
         """
         # Initialize configurations
-        configs = self.format.charts[chart_template]
+        configs = self.format.charts[template]
         color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
         num_format = self.format.numeric_types[numeric_type]
 
@@ -361,7 +357,7 @@ class ExcelAutoChart:
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_category: str = "",
-        chart_template: Literal['bar', 'bar_single'] = "bar",
+        template: Literal['bar', 'bar_single'] = "bar",
         axis_title: str = "",
         custom_colors: list[str] | None = None,
     ) -> Worksheet:
@@ -398,7 +394,7 @@ class ExcelAutoChart:
             If the DataFrame is empty or if an invalid chart_type is provided.
         """
         # Initialize configurations
-        configs = self.format.charts[chart_template]
+        configs = self.format.charts[template]
         color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
         num_format = self.format.numeric_types[numeric_type]
 
@@ -409,8 +405,8 @@ class ExcelAutoChart:
         # Raising errors
         if df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
-        if chart_template not in {"bar", "bar_single"}:
-            raise ValueError(f"Invalid chart_template for bar chart: {chart_template}. Expected one of 'bar' or 'bar_single'")
+        if template not in {"bar", "bar_single"}:
+            raise ValueError(f"Invalid chart_template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
 
         # Map grouping types to xlsxwriter subtypes
         subtype_map = {
@@ -501,7 +497,7 @@ class ExcelAutoChart:
         self,
         index: int,
         sheet_name: str,
-        chart_template: Literal["database", "index", "data_table", "text_table"] = "text_table",
+        template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_categories: str | list = ""
     ) -> Worksheet:
@@ -537,7 +533,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, chart_template, highlighted_categories)
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, template, highlighted_categories)
         self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
