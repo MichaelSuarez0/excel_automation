@@ -2,27 +2,19 @@ import os
 import pandas as pd
 from typing import Literal
 
-script_dir = os.path.abspath(os.path.dirname(__file__))
-
 class ExcelDataExtractor():
-    def __init__(self, file_name: str, folder: str = "otros", custom_path: str = ""):
+    def __init__(self, file_name: str, folder_path: str):
         """Class to obtain data from an Excel file, convert to DataFrame, apply transformations, and export it. 
         Engine: mostly pandas
 
         Parameters
         ----------
         file_name : str
-            The name of the Excel file to be loaded (from databases folder)
-        folder : str, optional:
-            Folder name inside "databases" where file is located (defaults to "otros")
-        custom_path : str, optional
-            If provided, this path is used instead of constructing a path based on 'databases' + 'folder'.
+            The name of the Excel file to be loaded (.xlsx extension is provided)
+        folder_path : str, optional:
+            Folder path where file is located
         """
-        if custom_path:
-            self.file_path = os.path.join(custom_path,  f'{file_name}.xlsx')
-        else:
-            self.file_path = os.path.join(script_dir, "..", "..", "databases", folder, f'{file_name}.xlsx')
-        self.output_path = os.path.join(script_dir, "..", "..", "products")
+        self.file_path = os.path.join(folder_path, f'{file_name}.xlsx')
         
     def _preprocess_dataframe(self, df: pd.DataFrame) -> pd.DataFrame:
         # Remove rows/columns that are completely empty, then replace NaN with ""
@@ -172,7 +164,9 @@ class ExcelDataExtractor():
             if key == "column":
                 missing_categories = [cat for cat in selected_categories if cat not in df_item.columns[1:]]
                 if missing_categories:
-                    raise KeyError(f"Some columns do not exist in the DataFrame, check typing: {missing_categories}")
+                    raise KeyError(
+                        f"Column(s) not found in DataFrame, check typing: {missing_categories}."
+                        "Reminder: first column is always retained and will raise this error if filtered.")
                 
                 if not filter_out:
                     cols = [df_item.columns[0]] + [
@@ -198,7 +192,9 @@ class ExcelDataExtractor():
                 #     raise KeyError(f"No rows matched: {selected_categories}")
                 missing_categories = [cat for cat in selected_categories if cat not in df_item.iloc[:, 0].values]
                 if missing_categories:
-                    raise KeyError(f"Some rows do not exist in the DataFrame, check typing: {missing_categories}")
+                    raise KeyError(
+                        f"Row(s) not found in DataFrame, check typing: {missing_categories}"
+                        "Reminder: first column is always used for filtering rows")
 
                 # Crear máscara y ordenar
                 if not filter_out:
@@ -332,7 +328,14 @@ class ExcelDataExtractor():
         return result_df
 
     # Writing methods (simple)
-    def dataframe_to_worksheet(self, df: pd.DataFrame, output_name: str, sheet_name: str = 'Hoja1', folder: str = "otros") -> None:
+    def dataframe_to_worksheet(
+        self,
+        df: pd.DataFrame, 
+        output_name: str, 
+        output_path: str, 
+        sheet_name: str = 'Hoja1', 
+        folder: str = "otros"
+    ) -> None:
         """Writes a DataFrame to a worksheet in the Excel file.
 
         Parameters
@@ -344,7 +347,7 @@ class ExcelDataExtractor():
         folder : str, optional
             The name of the folder inside "products". Defaults to "otros".
         """
-        output_file_path = os.path.join(self.output_path, folder, f'{output_name}.xlsx')
+        output_file_path = os.path.join(output_path, folder, f'{output_name}.xlsx')
         with pd.ExcelWriter(output_file_path, engine='openpyxl', mode='w') as writer:
             df.to_excel(writer, sheet_name=sheet_name, index=False)
         
@@ -352,6 +355,7 @@ class ExcelDataExtractor():
         self,
         dfs: list[pd.DataFrame],
         output_name: str,
+        output_path: str,
         sheet_names: list[str] = None, 
         skip_first: bool = True,
         folder: str = True
@@ -375,7 +379,7 @@ class ExcelDataExtractor():
         if len(dfs) != len(sheet_names):
             raise ValueError("The number of DataFrames must match the number of sheet names.")
 
-        output_file_path = os.path.join(self.output_path, folder, f'{output_name}.xlsx')
+        output_file_path = os.path.join(output_path, folder, f'{output_name}.xlsx')
         os.makedirs(os.path.dirname(output_file_path), exist_ok= True)
 
         with pd.ExcelWriter(output_file_path, engine='openpyxl', mode='w') as writer:
