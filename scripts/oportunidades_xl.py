@@ -1,12 +1,13 @@
 import os
-from observatorio_ceplan import Observatorio, Departamentos
-from excel_automation import ExcelDataExtractor, ExcelAutoChart, Color
 from typing import Tuple
 from itertools import cycle
 from icecream import ic
 from string import Template
 import pandas as pd
 from ubigeos_peru import Ubigeo as ubg
+from observatorio_ceplan import Observatorio, Departamentos
+from excel_automation import ExcelDataExtractor, ExcelAutoChart, Color
+
 
 # =================================================================
 #  1. Globals
@@ -17,7 +18,8 @@ folder_name: str = "oportunidades"
 
 script_dir = os.path.dirname(__file__)
 databases_path = os.path.join(script_dir, "..", "databases", folder_name)
-output_path = os.path.join(script_dir, "..", "products")
+output_folder = os.path.join(script_dir, "..", "products", "oportunidades")
+
 
 # =================================================================
 #  2. Helper functions
@@ -49,6 +51,7 @@ def convert_index_info(df: pd.DataFrame, departamento: str, otros: str | Tuple[s
     
     return df
 
+
 # =================================================================
 #  3. Main functions
 # =================================================================
@@ -72,7 +75,7 @@ def brecha_digital_xl():
         df_list[4] = excel.filter_data(df_list[4], ["Total", dpto])
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="decimal_1", highlighted_category="América del Sur",
                                         template="bar_single")
@@ -107,7 +110,7 @@ def edificaciones_antisismicas_xl():
         df_list[0] = df_list[0].replace("-", 0)
 
         #Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", template="column", axis_title="Unidades")
         chart_creator.create_table(index=2, sheet_name="Tab1")
         chart_creator.save_workbook()
@@ -169,7 +172,7 @@ def infraestructura_vial_xl():
         df_list[3] = df_list[3].sort_values(by = "Longitud (km)", ascending= True)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_table(index=5, sheet_name="Tab1", template="data_table", numeric_type="integer")
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", grouping="standard", numeric_type="percentage", template="bar")
@@ -208,7 +211,7 @@ def reforzamiento_programas_sociales_xl():
         df_list[2].iloc[:, 1:] = df_list[2].iloc[:, 1:].round(2)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", template="line_simple")
         chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", template="column", axis_title="Millones de soles")
@@ -238,7 +241,7 @@ def uso_tecnologia_educacion_xl():
         df_list[3].iloc[:,1] = df_list[3].iloc[:,1]/100_000_000
 
          # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", template="line", axis_title="Porcentaje (%)", custom_colors=colors)
         chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="decimal_2", template="bar_single", highlighted_category="Peru")  # Cambiar a columna
@@ -283,7 +286,7 @@ def aprovechamiento_ruta_seda():
             pass
 
         # # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_table(index=1, sheet_name="Tab1", numeric_type="decimal_1", template='data_table')
         chart_creator.create_line_chart(index=2, sheet_name="Fig1", numeric_type="decimal_2", template="line_monthly", custom_colors=[Color.ORANGE])
@@ -318,7 +321,7 @@ def uso_masivo_telecomunicaciones_xl():
         df_list[4] = excel.filter_data(df_list[4], años)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", template="line_single")
         chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="percentStacked", numeric_type="percentage", template="column_stacked")
@@ -353,7 +356,7 @@ def bellezas_naturales_xl():
         file_name = f"{code_clean} - {file_name_base}"
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{file_name}", "oportunidades")
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", grouping="standard", highlighted_category=dpto, template="bar_single")
         chart_creator.create_line_chart(index=-2, sheet_name="Fig2", numeric_type="integer", axis_title="Visitantes", template="line_monthly", custom_colors=[Color.GREEN_DARK])
@@ -394,7 +397,7 @@ def transicion_energias_renovables_xl():
         df_list[3] = excel.normalize_orientation(df_list[3])
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         # chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", 
         #                                 custom_colors=[Color.RED, Color.BLUE_DARK, Color.GREEN_DARK], chart_template="line")
@@ -445,7 +448,7 @@ def demanda_productos_organicos_xl():
             df_list[3] = df_list[3].sort_values(by="Valor FOB (Miles US$)", ascending=True)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
         chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="bar", custom_colors=[Color.YELLOW, Color.GREEN_DARK])
@@ -480,7 +483,7 @@ def uso_tecnologia_salud_xl():
         df_list[4] = df_list[4].iloc[:, 1:]
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", template="line", custom_colors=[
             Color.RED, Color.ORANGE, Color.GREEN_DARK, Color.BLUE_DARK, Color.BLUE])
@@ -520,14 +523,14 @@ def becas_estudiantiles_xl():
         df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
         
         # Charts
-        # chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
-        # chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
-        # chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
-        # chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
-        # chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=dpto, chart_template="bar_single")
-        # chart_creator.create_column_chart(index=6, sheet_name="Fig4", numeric_type="percentage", grouping="percentStacked", chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.BLUE_LIGHT])
-        # chart_creator.create_table(index=7, sheet_name="Tab1", chart_template="text_table")
-        # chart_creator.save_workbook()
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
+        chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
+        chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
+        chart_creator.create_bar_chart(index=5, sheet_name="Fig3", numeric_type="integer", highlighted_category=dpto, chart_template="bar_single")
+        chart_creator.create_column_chart(index=6, sheet_name="Fig4", numeric_type="percentage", grouping="percentStacked", chart_template="column_stacked", custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.BLUE_LIGHT])
+        chart_creator.create_table(index=7, sheet_name="Tab1", chart_template="text_table")
+        chart_creator.save_workbook()
         ic(code_clean)
 
 
@@ -564,7 +567,7 @@ def comunidades_nativas_campesinas():
         # df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
         
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, "Preservacion de conocimientos bioculturales"))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
         chart_creator.save_workbook()
@@ -594,7 +597,7 @@ def lucha_frontal_corrupcion():
         # df_list[2] = df_list[2].groupby(by = "año")["casos"].sum().reset_index()
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(folder_name, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
         #chart_creator.create_column_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="column_single")
@@ -605,7 +608,6 @@ def lucha_frontal_corrupcion():
 
 # TODO: Un logging para cada save
 # TODO: ExcelAutoChart podría tener una variable local para contar el número de Fig y asignarles automáticamente un nombre a los sheets
-# TODO: Mover databases dentro de excel_automation y products fuera, junto con tests
 if __name__ == "__main__":
     #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
