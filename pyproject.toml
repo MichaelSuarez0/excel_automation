@@ -1,11 +1,13 @@
 [project]
 name = "excel_automation"
 version = "0.1.0"
+readme = "README.md"
 
 [build-system]
-requires = ["setuptools>=42"]
+requires = ["setuptools>=42", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools.packages.find]
-where = ["."]
-
+[tool.setuptools]
+packages = ["excel_automation"] 
+# exclude = ["scripts*", "tests*"]
+# include = ["*"] 
