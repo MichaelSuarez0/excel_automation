@@ -38,12 +38,11 @@ class ExcelAutoChart:
         chart.set_title({'name': ''})
         chart.set_size(configs["size"])
         chart.set_chartarea(configs["chartarea"])
-        chart.set_plotarea(configs["plotarea"])
         chart.set_legend(configs["legend"])
 
         return chart
 
-    def _configure_dynamic_values(self, df: pd.DataFrame)-> Tuple[dict, dict, int]:
+    def _configure_dynamic_values(self, df: pd.DataFrame, bar: bool = False)-> Tuple[dict, dict, int]:
         "Returns legend, plot_area, sp_axis_num_format, num_font"
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
         legend = copy.deepcopy(self.format.charts["basic"]["legend"])
@@ -65,18 +64,30 @@ class ExcelAutoChart:
             #         }
             #     }
 
-        if high_len:
-            plot_area["layout"]["height"] -= 0.05
-        if first_col_max_value >= 9:
-            plot_area["layout"]["height"] -= 0.04
-        if first_col_max_value >= 13:
-            plot_area["layout"]["height"] -= 0.03
+        metric = "height" if not bar else "x"
+
+        if not bar:  # If not bar, perform the subtraction
+            if high_len:
+                plot_area["layout"][metric] -= 0.05
+            if first_col_max_value >= 9:
+                plot_area["layout"][metric] -= 0.04
+            if first_col_max_value >= 13:
+                plot_area["layout"][metric] -= 0.03
+        else:  
+            if high_len:
+                plot_area["layout"][metric] += 0.05
+            if first_col_max_value >= 9:
+                plot_area["layout"][metric] += 0.04
+            if first_col_max_value >= 13:
+                plot_area["layout"][metric] += 0.03
 
         sp_axis_num_format = '0' if not isinstance(df.iloc[0,0], pd.Timestamp) else 'mmm-yy'
         num_font = {
             'size': 9 if high_len else 10,
             'rotation': -30 if high_len else 0
             }
+        if bar:
+            num_font["rotation"] = 0
         
         return legend, plot_area, sp_axis_num_format, num_font
             
@@ -420,11 +431,14 @@ class ExcelAutoChart:
         chart = self._create_base_chart('bar', subtype)
 
         # Load dynamically modified formats
-        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
-        plot_area["layout"]["x"] += plot_area["layout"]["height"] - self.format.charts["basic"]["plotarea"]["layout"]["height"]
+        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df, bar = True)
+
+        #plot_area["layout"]["x"] += plot_area["layout"]["height"] - self.format.charts["basic"]["plotarea"]["layout"]["height"]
         plot_area["layout"]["height"] = self.format.charts["basic"]["plotarea"]["layout"]["height"]
-        plot_area["layout"]["height"] += 0.20
-        #plot_area["layout"]["width"] -= 0.10
+        plot_area["layout"]["height"] += 0.19
+        plot_area["layout"]["width"] -= 0.11
+        plot_area["layout"]["y"] -= 0.01
+        
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
@@ -475,13 +489,14 @@ class ExcelAutoChart:
             **self.format.charts['basic']["y_axis"], # Inverted
             **configs.get('x_axis', {}),
             'name': axis_title,
+            'num_font': num_font
         })
         chart.set_y_axis({
             **self.format.charts['basic']["x_axis"], # Inverted
             **configs.get('y_axis', {}),
             'num_format': axis_format,
-            # 'num_format': sp_axis_num_format,
-            # 'num_font': num_font
+            #'num_format': sp_axis_num_format,
+            'num_font': num_font
             })
         
 
