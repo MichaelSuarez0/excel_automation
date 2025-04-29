@@ -58,19 +58,19 @@ class ExcelDataExtractor():
     # Transformation methods
     def normalize_orientation(self, dfs: pd.DataFrame | list[pd.DataFrame]) -> pd.DataFrame | list[pd.DataFrame]:
         """
-        Normalizes the orientation of one or more DataFrames. Converts to list if a single DataFrame is provided.
+        Normalizes the orientation of one or more DataFrames. If a single DataFrame is provided, it returns a single normalized DataFrame; if a list of DataFrames is provided, it returns a list of normalized DataFrames.
 
-        Parameters:
+        Parameters
         ----------
-        dfs : pd.DataFrame | list[pd.DataFrame]
+        dfs : pd.DataFrame or list of pd.DataFrame
             A DataFrame or a list of DataFrames to be normalized.
 
-        Returns:
+        Returns
         -------
-        pd.DataFrame | list[pd.DataFrame]
+        pd.DataFrame or list of pd.DataFrame
             A normalized DataFrame if a single DataFrame was passed, or a list of normalized DataFrames if a list was passed.
-        
-        Raises:
+
+        Raises
         ------
         ValueError
             If the input is neither a DataFrame nor a list of DataFrames.
@@ -165,7 +165,7 @@ class ExcelDataExtractor():
                 missing_categories = [cat for cat in selected_categories if cat not in df_item.columns[1:]]
                 if missing_categories:
                     raise KeyError(
-                        f"Column(s) not found in DataFrame, check typing: {missing_categories}."
+                        f"Column(s) not found in DataFrame, check typing: {missing_categories}. "
                         "Reminder: first column is always retained and will raise this error if filtered.")
                 
                 if not filter_out:
@@ -193,7 +193,7 @@ class ExcelDataExtractor():
                 missing_categories = [cat for cat in selected_categories if cat not in df_item.iloc[:, 0].values]
                 if missing_categories:
                     raise KeyError(
-                        f"Row(s) not found in DataFrame, check typing: {missing_categories}"
+                        f"Row(s) not found in DataFrame, check typing: {missing_categories}. "
                         "Reminder: first column is always used for filtering rows")
 
                 # Crear máscara y ordenar
