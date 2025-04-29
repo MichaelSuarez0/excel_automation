@@ -8,7 +8,6 @@ from ubigeos_peru import Ubigeo as ubg
 from observatorio_ceplan import Observatorio, Departamentos
 from excel_automation import ExcelDataExtractor, ExcelAutoChart, Color
 
-
 # =================================================================
 #  1. Globals
 # =================================================================
@@ -57,21 +56,24 @@ def convert_index_info(df: pd.DataFrame, departamento: str, otros: str | Tuple[s
 # =================================================================
 def brecha_digital_xl():
     # Variables
-    regiones = ["Costa", "Sierra", "Selva", "Total"]
-    departamentos = ["Áncash", "Madre de Dios", "Puno", "Huánuco", "Amazonas", "Cajamarca", "Lambayeque", "San Martín", "Ucayali"]
-    code = "o8_{}"
+    departamentos = ["Áncash", "Madre de Dios", "Puno", "Huánuco", "Amazonas", "Cajamarca", "Lambayeque", "San Martín", "Ucayali", "Junín"]
     file_name_base = "Cierre de la brecha digital"
+    regiones = ["Costa", "Sierra", "Selva", "Total"]
 
     # ETL
     excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
     dfs = excel.worksheets_to_dataframes()
-    dfs[2:5] = excel.normalize_orientation(dfs[2:5])
+
+    dfs[4].iloc[:, 0] = dfs[4].iloc[:, 0].apply(lambda x: ubg.normalize_departamento(str(x), False, ignore_errors=True))
+    dfs[2] = excel.normalize_orientation(dfs[2])
+    dfs[4] = excel.normalize_orientation(dfs[4])
     dfs[2] = excel.filter_data(dfs[2], regiones)
+    ic(dfs[4])
 
     for dpto in departamentos:
         df_list = dfs.copy()
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
         df_list[0] = convert_index_info(df_list[0], dpto)
-        code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
         df_list[4] = excel.filter_data(df_list[4], ["Total", dpto])
 
         # Charts
@@ -582,34 +584,72 @@ def lucha_frontal_corrupcion():
     excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
     dfs = excel.worksheets_to_dataframes()
     
-    dfs[1] = dfs[1].sort_values(by = "Casos", ascending=True)
-    
-    # dfs[2] = excel.filter_data(dfs[2], ["dpto", "casos"], key="column")
-    # dfs[2]["dpto"] = dfs[2]["dpto"].apply(ubg.normalize_departamento)
-    
+    dfs[1] = dfs[1].sort_values(by = "Porcentaje", ascending=True)
+    dfs[2] = dfs[2].sort_values(by = "Casos", ascending=True)
     dfs[3].iloc[:, 1:] = dfs[3].iloc[:, 1:] / 100
     
     for dpto in departamentos:
         df_list = dfs.copy()
         code_clean = obs.get_code_from_titulo(dpto, file_name_base)
         df_list[0] = convert_index_info(df_list[0], dpto)
-        # df_list[2] = df_list[2].query("dpto == @dpto")
-        # df_list[2] = df_list[2].groupby(by = "año")["casos"].sum().reset_index()
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
-        #chart_creator.create_column_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="column_single")
-        chart_creator.create_line_chart(index=3, sheet_name="Fig2", numeric_type="percentage", template="line_simple")
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="percentage", highlighted_category=dpto, template="bar_single")
+        chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="integer", highlighted_category=dpto, template="bar_single")
+        chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="percentage", template="line_simple")
         chart_creator.create_table(index=4, sheet_name="Tab1", template="text_table")
+        chart_creator.save_workbook()
+
+
+
+# NOTA: PLANTILLA, NO CORRER
+def plantilla():
+    # Insertar aquí los departamentos y nombre de la temática
+    departamentos = []
+    file_name_base = ""
+
+    # Se mantiene igual siempre
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    dfs = excel.worksheets_to_dataframes()
+    
+    # Cambios para todos los departamentos
+    dfs[1] = dfs[1].sort_values(by = "Porcentaje", ascending=True)
+    dfs[2] = dfs[2].sort_values(by = "Casos", ascending=True)
+    dfs[3].iloc[:, 1:] = dfs[3].iloc[:, 1:] / 100
+    
+    ### Loop
+    for dpto in departamentos:
+        # Se mantiene igual siempre
+        df_list = dfs.copy()
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base)
+        df_list[0] = convert_index_info(df_list[0], dpto)
+
+        # Cambios personalizados para cada departamento:
+        df_list[1] = excel.filter_data(df_list[1], dpto, key="row")
+        df_list[3] = excel.filter_data(df_list[3], dpto, key="row")
+
+
+        ### Charts
+        # Se mantiene igual siempre
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator.create_table(index=0, sheet_name="Index", template='index')
+
+        # Gráficos personalizados para cada departamento
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="percentage", highlighted_category=dpto, template="bar_single")
+        chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="integer", highlighted_category=dpto, template="bar_single")
+        chart_creator.create_line_chart(index=3, sheet_name="Fig3", numeric_type="percentage", template="line_simple")
+        chart_creator.create_table(index=4, sheet_name="Tab1", template="text_table")
+
+        # Se mantiene
         chart_creator.save_workbook()
 
 
 # TODO: Un logging para cada save
 # TODO: ExcelAutoChart podría tener una variable local para contar el número de Fig y asignarles automáticamente un nombre a los sheets
 if __name__ == "__main__":
-    #brecha_digital_xl()
+    brecha_digital_xl()
     #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl() 
     #reforzamiento_programas_sociales_xl() 
@@ -622,5 +662,5 @@ if __name__ == "__main__":
     #uso_tecnologia_salud_xl()
     #becas_estudiantiles_xl()
     #comunidades_nativas_campesinas()
-    lucha_frontal_corrupcion()
+    #lucha_frontal_corrupcion()
     
