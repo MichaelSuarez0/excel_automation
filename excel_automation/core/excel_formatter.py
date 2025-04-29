@@ -107,9 +107,9 @@ class ExcelFormatter:
 
         # Modify base formats
         gray_format = {**fmt['first_column']}
-        gray_bold_format = {**gray_format, 'bold': True, 'align': 'left'}
+        gray_bold_format = {**gray_format, 'bold': True, 'align': 'left', 'left': 0}
         white_format = {**fmt['data'], 'right': 0}
-        white_bold_format = {**white_format, 'bold': True, 'align': 'left'}
+        white_bold_format = {**white_format, 'bold': True, 'align': 'left', 'left': 0}
         
         # Write table contents with alternating colors and bold for first column
         for row_idx in range(df.shape[0]):

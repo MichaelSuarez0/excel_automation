@@ -103,7 +103,7 @@ class CellFormats:
                     'align': 'center',
                     'valign': 'vcenter',
                     'text_wrap': True,
-                    'font_size': 10
+                    'font_size': 11
                 },
                 'first_column': {
                     **white_borders,
@@ -491,12 +491,13 @@ class ChartFormats:
             },
             'x_axis': {
                 'minor_tick_mark': 'none',
+                'major_tick_mark': 'outside',
                 'major_gridlines': {
                     'visible': False
                 },
                 'line': {
                     'width': 1,
-                    'color': Color.GRAY_LIGHT
+                    'color': Color.GRAY
                }
             },
             'y_axis': {

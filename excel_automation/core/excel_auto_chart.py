@@ -301,6 +301,7 @@ class ExcelAutoChart:
 
         # Load dynamically modified formats
         legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
+        plot_area["layout"]["height"] += 0.05
         if axis_title:
             plot_area["layout"]["x"] += 0.03
             plot_area["layout"]["width"] -= 0.03
@@ -317,7 +318,14 @@ class ExcelAutoChart:
             value_data = (df[col] != 0).all()
 
             current_color = next(color_cycle)
-            
+            if grouping in ("stacked", "percentStacked"):
+                if current_color in (Color.YELLOW, Color.GRAY):
+                    label_color = Color.BLACK
+                else:
+                    label_color = Color.WHITE
+            else:
+                label_color = Color.WHITE
+                
             series_params = {
                 **configs['series'],
                 'name': [sheet_name, 0, col_idx],
@@ -330,7 +338,7 @@ class ExcelAutoChart:
                     'value': value_data,
                     'font': {
                         **configs['series']['data_labels']['font'],
-                        'color': Color.WHITE if grouping in ("stacked", "percentStacked") else Color.BLACK}
+                        'color': label_color}
                     },
             }
             chart.add_series(series_params)

@@ -1,9 +1,9 @@
 import os
+import pandas as pd
+from icecream import ic
 from typing import Tuple
 from itertools import cycle
-from icecream import ic
 from string import Template
-import pandas as pd
 from ubigeos_peru import Ubigeo as ubg
 from observatorio_ceplan import Observatorio, Departamentos
 from excel_automation import ExcelDataExtractor, ExcelAutoChart, Color
@@ -57,24 +57,24 @@ def convert_index_info(df: pd.DataFrame, departamento: str, otros: str | Tuple[s
 def brecha_digital_xl():
     # Variables
     departamentos = ["Áncash", "Madre de Dios", "Puno", "Huánuco", "Amazonas", "Cajamarca", "Lambayeque", "San Martín", "Ucayali", "Junín"]
+    departamentos = ["Junín"]
     file_name_base = "Cierre de la brecha digital"
-    regiones = ["Costa", "Sierra", "Selva", "Total"]
+    regiones = ["Nacional", "Costa", "Sierra", "Selva"]
 
     # ETL
     excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
     dfs = excel.worksheets_to_dataframes()
 
     dfs[4].iloc[:, 0] = dfs[4].iloc[:, 0].apply(lambda x: ubg.normalize_departamento(str(x), False, ignore_errors=True))
-    dfs[2] = excel.normalize_orientation(dfs[2])
-    dfs[4] = excel.normalize_orientation(dfs[4])
+    dfs[2:5] = excel.normalize_orientation(dfs[2:5])
     dfs[2] = excel.filter_data(dfs[2], regiones)
-    ic(dfs[4])
+    dfs[3].iloc[:, 1:] = dfs[3].iloc[:, 1:] / 100
 
     for dpto in departamentos:
         df_list = dfs.copy()
         code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
         df_list[0] = convert_index_info(df_list[0], dpto)
-        df_list[4] = excel.filter_data(df_list[4], ["Total", dpto])
+        df_list[4] = excel.filter_data(df_list[4], ["Nacional", dpto])
 
         # Charts
         chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
@@ -83,7 +83,7 @@ def brecha_digital_xl():
                                         template="bar_single")
         chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="decimal_1", template="line",
                                         custom_colors=[Color.BLUE_DARK, Color.RED_DARK, Color.ORANGE, Color.GREEN_DARK])
-        chart_creator.create_column_chart(index=3, sheet_name="Fig3", grouping="stacked", template="column_stacked", numeric_type="decimal_2",
+        chart_creator.create_column_chart(index=3, sheet_name="Fig3", grouping="percentStacked", template="column_stacked", numeric_type="percentage",
                                           custom_colors=[Color.BLUE_DARK, Color.BLUE, Color.GREEN_DARK, Color.RED_DARK, Color.ORANGE, Color.YELLOW, Color.GRAY])
         chart_creator.create_line_chart(index=4, sheet_name="Fig4", numeric_type="decimal_1", template="line_simple")
         chart_creator.create_table(index=5, sheet_name="Tab1")
