@@ -34,13 +34,13 @@ class ExcelWriterXL:
             The list of DataFrames to be written
         """
         self.output_path = os.path.join(output_folder, f"{output_name}.xlsx")
+        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
         self.writer = pd.ExcelWriter(self.output_path, engine='xlsxwriter')
         self.formatter = ExcelFormatter(df_list, self.writer)
         self.format = Formats()
         self.workbook: Workbook = self.writer.book
         self.sheet_list = []
         self.df_list = df_list
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
     
     def _ensure_worksheet_exists(self, sheet_name: str) -> Worksheet:
         if sheet_name in self.writer.sheets:

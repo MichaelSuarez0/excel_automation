@@ -152,8 +152,14 @@ class ExcelDataExtractor():
         Departamento  2014  2015
         0         Lima    10    11
         """
+        if not isinstance(df, pd.DataFrame) or isinstance(df, list):
+            raise TypeError(f"Invalid input. Accepted types: DataFrame or list")
+        
         is_single_df = isinstance(df, pd.DataFrame)
         dfs = [df] if is_single_df else df.copy()
+        
+        if not all(isinstance(df, pd.DataFrame) for df in dfs):
+            raise TypeError(f"Invalid input. At least one element in the list is not a DataFrame")
         
         # Normalize selected_categories to list
         if isinstance(selected_categories, str):

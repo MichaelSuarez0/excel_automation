@@ -7,7 +7,7 @@ from typing import Literal, Tuple
 from itertools import cycle
 import copy
 
-
+# TODO: Raise errors for invalid templates
 # TODO: Use worksheet.dim_colmax
 class ExcelAutoChart:
     def __init__(self, df_list: list[pd.DataFrame], output_name: str, output_folder: str):
@@ -126,7 +126,7 @@ class ExcelAutoChart:
         numeric_type : str, optional
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2').
-        chart_template : str, optional
+        template : str, optional
             Template for the chart configuration: 'line', 'line_simple', 'line_single', 'line_monthly' (default is "line").
         axis_title : str, optional
             Title for the axis (default is an empty string).
@@ -258,7 +258,7 @@ class ExcelAutoChart:
         numeric_type : str, optional
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
-        chart_template : str, optional
+        template : str, optional
             Template for the chart configuration: 'column', 'column_simple', 'column_single' or 'column_stacked (default is "column").
         axis_title : str, optional
             Title for the axis (default is an empty string).
@@ -273,7 +273,7 @@ class ExcelAutoChart:
         Raises
         ------
         ValueError
-            If the DataFrame is empty or if an invalid chart_template is provided.
+            If the DataFrame is empty or if an invalid template is provided.
         """
         # Initialize configurations
         configs = self.format.charts[template]
@@ -395,7 +395,7 @@ class ExcelAutoChart:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
         highlighted_category : str, optional
             Category that will be highlighted with a different color (red).
-        chart_template : str, optional
+        template : str, optional
             Template for the chart configuration: 'bar', or 'bar_single' (default is "bar").
         axis_title : str, optional
             Title for the axis (default is an empty string).
@@ -425,7 +425,7 @@ class ExcelAutoChart:
         if df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
         if template not in {"bar", "bar_single"}:
-            raise ValueError(f"Invalid chart_template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
+            raise ValueError(f"Invalid template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
 
         # Map grouping types to xlsxwriter subtypes
         subtype_map = {
@@ -534,7 +534,7 @@ class ExcelAutoChart:
             The index of the DataFrame in `df_list` to use.
         sheet_name : str, optional
             The name of the worksheet where the table will be inserted.
-        chart_template : {'database', 'index', 'data_table', 'text_table'}, optional
+        template : {'database', 'index', 'data_table', 'text_table'}, optional
             The type of chart template to apply to the table (default is 'text_table').
         numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
             The numeric format for the values in the table (default is 'decimal_1').

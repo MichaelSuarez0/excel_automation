@@ -290,7 +290,7 @@ class ChartFormats:
             'y_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_GRIDS}
                 }
             }
         }
@@ -311,14 +311,14 @@ class ChartFormats:
             'x_axis': {
                 'minor_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT},
+                    'line': {'color': Color.GRAY_GRIDS},
                 }
             },
             'y_axis': {
                 'min': 0,
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT},
+                    'line': {'color': Color.GRAY_GRIDS},
                 }
             }
         }
@@ -342,13 +342,13 @@ class ChartFormats:
             'y_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_GRIDS}
                 }
             },
             'x_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_GRIDS}
                 }
             }
         }
@@ -380,7 +380,7 @@ class ChartFormats:
                 'visible': False,
                 'major_gridlines': {
                     'visible': False,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_GRIDS}
                 }
             }
         }
@@ -398,7 +398,7 @@ class ChartFormats:
            'x_axis': {
                 'major_gridlines': {
                     'visible': True,
-                    'line': {'color': Color.GRAY_LIGHT}
+                    'line': {'color': Color.GRAY_GRIDS}
                 }
             }
         }
