@@ -65,7 +65,7 @@ def brecha_digital_xl():
     excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
     dfs = excel.worksheets_to_dataframes()
 
-    dfs[4].iloc[:, 0] = dfs[4].iloc[:, 0].apply(lambda x: ubg.normalize_departamento(str(x), False, ignore_errors=True))
+    dfs[4].iloc[:, 0] = dfs[4].iloc[:, 0].apply(lambda x: ubg.validate_departamento(str(x), False, ignore_errors=True))
     dfs[2:5] = excel.normalize_orientation(dfs[2:5])
     dfs[2] = excel.filter_data(dfs[2], regiones)
     dfs[3].iloc[:, 1:] = dfs[3].iloc[:, 1:] / 100
@@ -623,7 +623,7 @@ def plantilla():
     for dpto in departamentos:
         # Se mantiene igual siempre
         df_list = dfs.copy()
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base)
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
         df_list[0] = convert_index_info(df_list[0], dpto)
 
         # Cambios personalizados para cada departamento:
@@ -646,10 +646,57 @@ def plantilla():
         chart_creator.save_workbook()
 
 
+def infraestructura_aeroportuaria():
+    # Insertar aquí los departamentos y nombre de la temática
+    # Falta Callao
+    departamentos = ["Tumbes", "San Martín", "Piura", "Moquegua", "Loreto", "La Libertad", "Huánuco", "Cusco", "Cajamarca", "Amazonas"]
+    file_name_base = "Mejoramiento de la infraestructura aeroportuaria"
+
+    # Se mantiene igual siempre
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    dfs = excel.worksheets_to_dataframes()
+    
+    # Cambios para todos los departamentos
+    dfs[1]["Departamento"] = dfs[1]["Departamento"].apply(ubg.validate_departamento)
+    dfs[2]["Departamento"] = dfs[2]["Departamento"].apply(ubg.validate_departamento)
+    dfs[1] = excel.filter_data(dfs[1], ["INDICADOR", 2023])
+    dfs[3].iloc[:,1] = dfs[3].iloc[:,1].astype(str).str.title()
+    
+    ### Loop
+    for dpto in departamentos:
+        # Se mantiene igual siempre
+        df_list = dfs.copy()
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
+        df_list[0] = convert_index_info(df_list[0], dpto)
+
+        # Cambios personalizados para cada departamento:
+        df_list[2] = excel.filter_data(df_list[2], dpto, key="row")
+        df_list[2] = df_list[2].drop("Departamento", axis=1)
+        df_list[2] = excel.normalize_orientation(df_list[2])
+
+        df_list[3] = excel.filter_data(df_list[3], dpto, key="row")
+        df_list[3] = df_list[3].drop("Departamento", axis=1)
+
+
+        ### Charts
+        # Se mantiene igual siempre
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator.create_table(index=0, sheet_name="Index", template='index')
+
+        # Gráficos personalizados para cada departamento
+        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
+        chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="line_simple")
+        chart_creator.create_table(index=3, sheet_name="Tab1", template="data_table")
+        chart_creator.create_table(index=4, sheet_name="Tab2", template="text_table")
+
+        # Se mantiene
+        chart_creator.save_workbook()
+
+
 # TODO: Un logging para cada save
 # TODO: ExcelAutoChart podría tener una variable local para contar el número de Fig y asignarles automáticamente un nombre a los sheets
 if __name__ == "__main__":
-    brecha_digital_xl()
+    #brecha_digital_xl()
     #edificaciones_antisismicas_xl()
     #infraestructura_vial_xl() 
     #reforzamiento_programas_sociales_xl() 
@@ -663,4 +710,5 @@ if __name__ == "__main__":
     #becas_estudiantiles_xl()
     #comunidades_nativas_campesinas()
     #lucha_frontal_corrupcion()
+    infraestructura_aeroportuaria()
     
