@@ -69,6 +69,11 @@ class CellFormats:
             'border_color': Color.WHITE,
         }
 
+        gray_borders = {
+            'border': 1,
+            'border_color': Color.GRAY,
+        }
+
         return { 
             'database': {
                 'header': {
@@ -106,7 +111,7 @@ class CellFormats:
                     'font_size': 11
                 },
                 'first_column': {
-                    **white_borders,
+                    **gray_borders,
                     'bg_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'align': 'justify',
@@ -114,8 +119,7 @@ class CellFormats:
                     'font_size': 10
                 },
                 'data': {
-                    'border': 1,
-                    'border_color': Color.GRAY_LIGHT,
+                    **gray_borders,
                     'align': 'justify',
                     'valign': 'vcenter',
                     'text_wrap': True,
@@ -161,7 +165,7 @@ class CellFormats:
                     'font_size': 10
                 },
                 'first_column': {
-                    **white_borders,
+                    **gray_borders,
                     'bg_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'align': 'justify',
@@ -169,8 +173,7 @@ class CellFormats:
                     'font_size': 10
                 },
                 'data': {
-                    'border': 1,
-                    'border_color': Color.GRAY_LIGHT,
+                    **gray_borders,
                     'align': 'justify',
                     'valign': 'vcenter',
                     'text_wrap': True,

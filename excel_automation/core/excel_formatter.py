@@ -106,7 +106,7 @@ class ExcelFormatter:
             worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt['header']))
 
         # Modify base formats
-        gray_format = {**fmt['first_column']}
+        gray_format = {**fmt['first_column'], 'right': 0}
         gray_bold_format = {**gray_format, 'bold': True, 'align': 'left', 'left': 0}
         white_format = {**fmt['data'], 'right': 0}
         white_bold_format = {**white_format, 'bold': True, 'align': 'left', 'left': 0}
@@ -210,7 +210,7 @@ class ExcelFormatter:
         worksheet.set_column('B:C', 40)
         worksheet.set_column('D:D', 15)
         worksheet.set_column('E:G', 25)
-        #worksheet.set_column('G:G', 15)
+        #worksheet.set_column('G:G', 20)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)

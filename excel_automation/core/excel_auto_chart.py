@@ -319,7 +319,7 @@ class ExcelAutoChart:
 
             current_color = next(color_cycle)
             if grouping in ("stacked", "percentStacked"):
-                if current_color in (Color.YELLOW, Color.GRAY):
+                if current_color in (Color.YELLOW, Color.GRAY_DARK):
                     label_color = Color.BLACK
                 else:
                     label_color = Color.WHITE

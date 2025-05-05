@@ -12,9 +12,9 @@ class Color(str, Enum):
     BLUE_DARK: str = "#00194b"
     GREEN_DARK: str = "#007630"
     GREEN_LIGHT: str = "#00B050"
-    GRAY_LIGHT: str = "#E8E8E8"
-    GRAY_GRIDS: str = "#F0F0F0"
-    GRAY: str = "#a5a5a5"
+    GRAY_LIGHT: str = "#EBEBEB" # Cell backgrounds and borders
+    GRAY_GRIDS: str = "#F2F2F2" # Axis grids (almost imperceptible)
+    GRAY: str = "#D2D2D2"       # General use (high contrast)
     YELLOW: str = "#FEC200"
     WHITE: str = '#FFFFFF'
     ORANGE: str = "#DD6909"
