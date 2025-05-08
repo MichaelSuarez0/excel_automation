@@ -26,8 +26,8 @@ class ExcelAutoChart:
         self.writer = ExcelWriterXL(df_list, output_name, output_folder)
         self.workbook: Workbook = self.writer.workbook
         self.format = Formats()
-        self.sheet_count = 0
-        self.sheet_list = []
+        self.tab_counter = 0
+        self.fig_counter = 0
         
     # TODO: Consider discussing chart font being Aptos Narrow
     # TODO: chart.set_y_axis({'crossing': 'min'}) if values < 0
@@ -73,6 +73,8 @@ class ExcelAutoChart:
                 plot_area["layout"][metric] -= 0.04
             if first_col_max_value >= 13:
                 plot_area["layout"][metric] -= 0.03
+            if first_col_max_value >= 16:
+                plot_area["layout"][metric] -= 0.03
         else:  
             if high_len:
                 plot_area["layout"][metric] += 0.05
@@ -80,11 +82,13 @@ class ExcelAutoChart:
                 plot_area["layout"][metric] += 0.04
             if first_col_max_value >= 13:
                 plot_area["layout"][metric] += 0.03
+            if first_col_max_value >= 16:
+                plot_area["layout"][metric] -= 0.03
 
         sp_axis_num_format = '0' if not isinstance(df.iloc[0,0], pd.Timestamp) else 'mmm-yy'
         num_font = {
             'size': 9 if high_len else 10,
-            'rotation': -30 if high_len else 0
+            'rotation': -35 if high_len else 0
             }
         if bar:
             num_font["rotation"] = 0
@@ -108,7 +112,7 @@ class ExcelAutoChart:
     def create_line_chart(
         self,
         index: int = 0,
-        sheet_name: str = "LineChart",
+        sheet_name: str = "",
         numeric_type: Literal['integer', 'decimal_1', 'decimal_2', 'percentage'] = "decimal_2",
         template: Literal['line', 'line_simple', 'line_single', 'line_monthly'] = "line",
         axis_title: str = "",
@@ -122,7 +126,7 @@ class ExcelAutoChart:
         index : int, optional
             Index of the DataFrame in df_list to use (default is 0).
         sheet_name : str, optional
-            Name of the worksheet (default is "LineChart").
+            Set a name for a worksheet, else name will be dynamically generated like 'Fig#'.
         numeric_type : str, optional
             Defines the number format for the series. Options are:
             'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2').
@@ -144,9 +148,14 @@ class ExcelAutoChart:
         color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
         num_format = self.format.numeric_types[numeric_type]
         
-        # Writing to sheet
-        df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
-        self.sheet_list.append(sheet_name)
+        # Writing data to sheet
+        self.fig_counter += 1
+        sheet_name = sheet_name if sheet_name else f"Fig{self.fig_counter}"
+        df, worksheet = self.writer.write_from_df(
+            df = self.df_list[index], 
+            sheet_name = sheet_name, 
+            num_format = num_format, 
+            format_template= "database")
         
         # Load predefined formats
         chart = self._create_base_chart('line')
@@ -228,9 +237,7 @@ class ExcelAutoChart:
         position = 'E3' if len(df.columns[1:]) < 4 else 'J3'
         worksheet.insert_chart(position, chart, {'x_offset': 90, 'y_offset': 10})
         
-        #self.writer.close()  # Automatically saves
-        print(f"✅ Gráfico de líneas agregado en la hoja {self.sheet_count + 1}")
-        self.sheet_count += 1
+        print(f"✅ Gráfico de líneas agregado en la hoja {sheet_name}")
         return worksheet
     
 
@@ -252,7 +259,7 @@ class ExcelAutoChart:
         index : int, optional
             Index of the DataFrame in df_list to use (default is 0).
         sheet_name : str, optional
-            Assign a name to the new worksheet.
+            Set a name for a worksheet, else name will be dynamically generated like 'Fig#'.
         grouping : str, optional
             Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
         numeric_type : str, optional
@@ -281,8 +288,13 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
-        self.sheet_list.append(sheet_name)
+        self.fig_counter += 1
+        sheet_name = sheet_name if sheet_name else f"Fig{self.fig_counter}"
+        df, worksheet = self.writer.write_from_df(
+            df = self.df_list[index], 
+            sheet_name = sheet_name, 
+            num_format = num_format, 
+            format_template= "database")
         
         # Raising errors
         if df.empty:
@@ -387,7 +399,7 @@ class ExcelAutoChart:
         index : int, optional
             Index of the DataFrame in df_list to use (default is 0).
         sheet_name : str, optional
-            Name of the worksheet (default is "FigX").
+            Set a name for a worksheet, else name will be dynamically generated like 'Fig#'.
         grouping : str, optional
             Grouping type: "standard", "stacked", or "percentStacked" (default is "standard").
         numeric_type : str, optional
@@ -418,8 +430,13 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
 
         # Writing to sheet
-        df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, "database")
-        self.sheet_list.append(sheet_name)
+        self.fig_counter += 1
+        sheet_name = sheet_name if sheet_name else f"Fig{self.fig_counter}"
+        df, worksheet = self.writer.write_from_df(
+            df = self.df_list[index], 
+            sheet_name = sheet_name, 
+            num_format = num_format, 
+            format_template= "database")
 
         # Raising errors
         if df.empty:
@@ -516,10 +533,71 @@ class ExcelAutoChart:
         self.sheet_count += 1
         return worksheet 
 
+    def create_dot_chart(
+        self,
+        index: int,
+        sheet_name: str = "",
+        numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
+        highlighted_category: str = "",
+        template: Literal['small'] = "small",
+        axis_title: str = "",
+        custom_colors: list[str] | None = None,
+    ) -> Worksheet:
+        """Generate a cleveland dot plot in Excel from data in a DataFrame list.
+
+        Parameters
+        ----------
+        index : int, optional
+            Index of the DataFrame in df_list to use (default is 0).
+        sheet_name : str, optional
+            Set a name for a worksheet, else name will be dynamically generated like 'Fig#'.
+        numeric_type : str, optional
+            Defines the number format for the series. Options are:
+            'integer', 'decimal_1', 'decimal_2', 'percentage'. (default is 'decimal_2')
+        highlighted_category : str, optional
+            Category that will be highlighted with a different color (red).
+        template : str, optional
+            Template for the chart configuration: FILL
+        axis_title : str, optional
+            Title for the axis (default is an empty string).
+        custom_colors : list of str or None, optional
+            A list of custom colors to use for the chart series. If None, the default color cycle will be used.
+
+        Returns
+        -------
+        Worksheet
+            The worksheet with the inserted bar chart.
+
+        Raises
+        ------
+        ValueError
+            If the DataFrame is empty or if an invalid chart_type is provided.
+        """
+        # Initialize configurations
+        configs = self.format.charts[template]
+        color_cycle = cycle(configs['colors']) if not custom_colors else cycle(custom_colors)
+        num_format = self.format.numeric_types[numeric_type]
+
+        # Writing to sheet
+        self.fig_counter += 1
+        sheet_name = sheet_name if sheet_name else f"Fig{self.fig_counter}"
+        df, worksheet = self.writer.write_from_df(
+            df = self.df_list[index], 
+            sheet_name = sheet_name, 
+            num_format = num_format, 
+            format_template= "database")
+
+        # Raising errors
+        if df.empty:
+            raise ValueError("DataFrame is empty. No data to plot.")
+        if template not in {"bar", "bar_single"}:
+            raise ValueError(f"Invalid template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
+
+
     def create_table(
         self,
         index: int,
-        sheet_name: str,
+        sheet_name: str = "",
         template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_categories: str | list = ""
@@ -533,7 +611,7 @@ class ExcelAutoChart:
         index : int, optional
             The index of the DataFrame in `df_list` to use.
         sheet_name : str, optional
-            The name of the worksheet where the table will be inserted.
+            Set a name for a worksheet, else name will be dynamically generated like 'Tab#'.
         template : {'database', 'index', 'data_table', 'text_table'}, optional
             The type of chart template to apply to the table (default is 'text_table').
         numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
