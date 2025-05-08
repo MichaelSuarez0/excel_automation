@@ -241,7 +241,6 @@ class ExcelAutoChart:
         return worksheet
     
 
-    # TODO: If COLOR == bright, change font color to black
     def create_column_chart(
         self,
         index: int,
@@ -376,8 +375,7 @@ class ExcelAutoChart:
         position = 'E3' if len(df.columns[1:]) < 4 else 'J3'
         worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
         
-        print(f"✅ Gráfico de columnas agregado en la hoja {self.sheet_count + 1}")
-        self.sheet_count += 1
+        print(f"✅ Gráfico de columnas agregado en la hoja {sheet_name}")
         return worksheet 
     
 
@@ -529,17 +527,25 @@ class ExcelAutoChart:
         position = 'E3' if len(df.columns[1:]) < 4 else 'J3'
         worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
         
-        print(f"✅ Gráfico de barras agregado en la hoja {self.sheet_count + 1}")
+        print(f"✅ Gráfico de barras agregado en la hoja '{sheet_name}'")
         self.sheet_count += 1
         return worksheet 
 
+    # TODO: Padding around max and min values so that error bars do not cut
+    # TODO: Not hardcoding delete_series for legend
+    # TODO: Dynamically adjust plotarea x and width values based on first column length
+    # TODO: Create small and large templates (with recommended max observations for each)
+    # TODO: Alinear grids secundarias
+    # TODO: Mover la sheet_name "_" al final siempre
+    # TODO: Set transparency for mock data labels
+    # TODO: For small templates, adjust data labels dynamically
     def create_dot_chart(
         self,
         index: int,
         sheet_name: str = "",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_category: str = "",
-        template: Literal['small'] = "small",
+        template: Literal['cleveland_dot'] = "cleveland_dot",
         axis_title: str = "",
         custom_colors: list[str] | None = None,
     ) -> Worksheet:
@@ -590,9 +596,146 @@ class ExcelAutoChart:
         # Raising errors
         if df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
-        if template not in {"bar", "bar_single"}:
-            raise ValueError(f"Invalid template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
+        # if template not in {"bar", "bar_single"}:
+        #     raise ValueError(f"Invalid template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
+        
+        # Create new columns
+        n_rows = df.shape[0]
+        max_value = int(df.iloc[:,1:].max().max())
+        interval = max_value / (n_rows-1)
+        y_values = []
+        y_values.append(0)
+        for number in range(n_rows):
+            y_values.append(y_values[-1] + interval)
+        
+        y_values.pop()
+        custom_values = [1] * (n_rows)
 
+        mock_df = pd.DataFrame({
+            'y_values': y_values,
+            'custom_values': custom_values,
+            'difference_values': (df.iloc[:,1] - df.iloc[:,2]).to_list()
+            }
+        )
+        
+        mock_sheet_name = "_"
+        mock_df, mock_worksheet = self.writer.write_from_df(
+            df = mock_df, 
+            sheet_name = mock_sheet_name, 
+            num_format = num_format, 
+            format_template= "database")
+
+        categories = [{'value': category} for category in df.iloc[:,0]]
+        
+        # Load predefined formats
+        chart = self._create_base_chart('scatter')
+        
+        # Load dynamically modified formats
+        legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df)
+        plot_area["layout"]["height"] += 0.25
+        plot_area["layout"]["x"] += 0.1
+        plot_area["layout"]["width"] -= 0.03
+
+        if axis_title:
+            plot_area["layout"]["x"] += 0.03
+            plot_area["layout"]["width"] -= 0.03
+
+        # Modify predefined formats
+        chart.set_legend({'delete_series': [-1, -2]})
+        chart.set_plotarea(plot_area)
+        if "size" in configs:
+            chart.set_size(configs["size"])
+    
+        # Add data series with color scheme
+        for idx, col in enumerate(df.columns[1:]):
+            current_color = str(next(color_cycle))
+            idx += 1
+
+            marker_config = {
+                #**configs["series"].get("markers", {}),
+                'fill': {'color': current_color},
+                'line': {'color': current_color},
+                'type': 'circle',
+                'size': 8,
+            }
+            error_bar_config = {
+                'x_error_bars':{
+                    **configs['x_error_bars'],
+                    'plus_values': mock_df['difference_values'].to_list(),
+                }
+            }
+
+            series_params = {
+                **configs["series"],
+                **(error_bar_config if idx == 2 else {}),
+                'name': [sheet_name, 0, idx],
+                'categories': [sheet_name, 1, idx, n_rows, idx], 
+                'values': [mock_sheet_name, 1, 0, n_rows, 0], # List of y_values (intervals)
+                'data_labels': {
+                    **configs['series'].get('data_labels', {}),
+                    'value': configs['series']['data_labels'].get('value', True),
+                    'position': configs['series']['data_labels'].get('position', 'above'),
+                    'num_format': num_format,
+                    'font':{
+                        'color': configs['series']['data_labels'].get('font', {}).get('color', current_color),
+                        'size': configs['series']['data_labels'].get('font', {}).get('size', 10),
+                        'bold': configs['series']['data_labels'].get('font', {}).get('bold', False)
+                        },
+                    },
+                'marker': marker_config
+            }
+            
+            chart.add_series(series_params)
+        
+        # Set false labels
+        label_series = {
+            **configs["series"],
+            'name': [mock_sheet_name, 0, 0],
+            'categories': [mock_sheet_name, 1, 1, n_rows, 1], 
+            'values': [mock_sheet_name, 1, 0, n_rows, 0],
+            'data_labels': {
+                **configs['series'].get('data_labels', {}),
+                'custom': categories,
+                'position': 'left'
+                },
+            'marker': {
+                'fill': {'color': Color.WHITE},
+                'line': {'color': Color.WHITE},
+                'type': 'circle',
+                'size': 8,
+            }
+        }
+            
+        chart.add_series(label_series)
+
+        # Configure axes
+        axis_format = self._configure_axis(num_format)
+
+        chart.set_x_axis({
+            **self.format.charts['basic']["x_axis"],
+            **configs.get('x_axis', {}),
+            'name': axis_title,
+            'num_font': num_font,
+        })
+        chart.set_y_axis({
+            **self.format.charts['basic']["y_axis"],
+            **configs.get('y_axis', {}),
+            'num_format': axis_format,
+            #'num_format': sp_axis_num_format,
+            'num_font': num_font,
+            'max': max_value,
+            'min': 0
+            })
+        
+        
+        # Insert chart with proper positioning
+        position = 'E3' if len(df.columns[1:]) < 4 else 'J3'
+        worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
+        
+        print(f"✅ Gráfico de puntos (dot plot) agregado en la hoja '{sheet_name}'")
+        self.fig_counter += 1
+        return worksheet 
+        
 
     def create_table(
         self,
@@ -635,7 +778,6 @@ class ExcelAutoChart:
         
         # Retrieve the DataFrame and the corresponding worksheet
         data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, template, highlighted_categories)
-        self.sheet_list.append(sheet_name)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -644,8 +786,7 @@ class ExcelAutoChart:
         # Hide gridlines
         worksheet.hide_gridlines(2)
 
-        print(f"✅ Tabla agregada en la hoja {self.sheet_count + 1}")
-        self.sheet_count += 1
+        print(f"✅ Tabla agregada en la hoja '{sheet_name}'")
         return worksheet
 
     def save_workbook(self):
