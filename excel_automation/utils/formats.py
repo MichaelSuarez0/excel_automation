@@ -2,9 +2,9 @@ from .colors import Color
 from typing import Any, Literal
 from functools import cached_property
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
-class Alignment(str, Enum):
+class Alignment(StrEnum):
     left = 'left'
     right = 'right'
     center = 'center'
@@ -37,8 +37,9 @@ class Formats():
     @cached_property
     def charts(self) -> dict[
         Literal[
-            'basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 
-            'marker', 'marker_simple', 'y_axis', 'x_axis'
+            'basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 
+            'bar', 'cleveland_dot',
+            # 'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
     ]:
@@ -47,7 +48,7 @@ class Formats():
 
 class NumericTypes:
     @cached_property    
-    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], Any]:
+    def numeric_types(self) -> dict[Literal['date', 'integer', 'decimal_1', 'decimal_2', 'percentage'], str]:
         return {
             'date': 'mmm-yy',
             'integer': '0',
@@ -57,7 +58,6 @@ class NumericTypes:
         }
     
 
-# TODO: Return cycle para las listas (por ejemplo colores) y llamar al dict con next
 class CellFormats:
     @cached_property
     def cells(self) -> dict[
@@ -242,9 +242,15 @@ class ChartFormats:
             Color.BLUE_DARK, 
             Color.YELLOW
         ]
+        self._cleveland_dot_colors = [
+            Color.BLUE_DARK,
+            Color.BLUE_LIGHT,
+        ]
+
 
     @cached_property
-    def charts(self) -> dict[Literal['basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 'bar_single'], Any]:
+    def charts(self) -> dict[Literal['basic', 'line', 'line_simple', 'line_single', 'line_monthly',
+                                     'column', 'column_simple', 'column_single', 'column_stacked', 'bar', 'bar_single', 'cleveland_dot'], Any]:
         """
         Accede a los formatos para gráficos en un solo diccionario.
         """
@@ -260,6 +266,7 @@ class ChartFormats:
             'column_stacked': self._column_stacked(),
             'bar': self._bar(),
             'bar_single': self._bar_single(),
+            'cleveland_dot': self._cleveland_dot()
         }
 
     def _basic(self):
@@ -479,7 +486,7 @@ class ChartFormats:
     # Y max should be 100
     def _column_stacked(self):
         return {
-            'size': {'width': 580, 'height': 320},
+            'size': {'width': 600, 'height': 320},
             'colors': self._column_percent_stacked_colors,
             'series': {
                 'gap': 50,
@@ -516,7 +523,7 @@ class ChartFormats:
 
     def _bar(self):
         return {
-            'size': {'width': 570, 'height': 310},
+            'size': {'width': 600, 'height': 310},
             'colors': self._bar_colors,
             'series': {
                 'gap': 60,
@@ -543,7 +550,7 @@ class ChartFormats:
 
     def _bar_single(self):
         return {
-            'size': {'width': 570, 'height': 450},
+            'size': {'width': 600, 'height': 450},
             'legend': {'none': True},
             'colors': self._column_simple_colors,
             'series': {
@@ -564,8 +571,47 @@ class ChartFormats:
                 'major_tick_mark': 'none',
                 'major_gridlines': {'visible': False}
             }
-        }
+        },
 
+    def _cleveland_dot(self):
+        return {
+            'colors': self._cleveland_dot_colors,
+            'size': {'width': 600, 'height': 450},
+            'legend': {'delete_series': [-1]},
+            'x_error_bars':{
+                'end_style': 0,
+                'direction': 'plus',
+                'type': 'custom',
+                'line': {'width': 4, 'color': Color.GRAY},
+            },
+            'series': {
+                'marker': {'type': 'circle', 'size': 8},
+                'data_labels': {'value': False}
+            },
+            'series': {
+                'data_labels': {
+                    'category': True,
+                    'value': False,
+                    'position': 'right',
+                    'font': {
+                        'bold': True,
+                        'color': Color.BLACK,
+                        'size': 10
+                    }
+                }
+            },
+            'y_axis': {
+                'visible': False,
+                'reverse': False,
+                'major_gridlines': {'visible': False},
+            },
+            'x_axis': {
+                'visible': False,
+                'line': {'none': True},
+                'major_tick_mark': 'none',
+                'major_gridlines': {'visible': False}
+            }
+        }
 
         # chart.set_title({'name': ''})
         # chart.set_size({'width': 600, 'height': 420})
