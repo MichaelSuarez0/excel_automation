@@ -37,18 +37,20 @@ class ExcelFormatter:
     def apply_database_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
         """Applies formatting only to cells with data."""
 
+        ### Basic configurations
+        fmt = self.format.cells['database']
+        fmt['data']['num_format'] = num_format
+        worksheet.hide_gridlines(2)
+
         ### Widths and heights
-        worksheet.set_column('A:A', 15)
+        for column, width in fmt["column_widths"].items():
+            worksheet.set_column(column, width)
+
         if len(df.columns) > 1:
             if len(str(df.columns[1])) > 11:
                 worksheet.set_column(1, len(df.columns) - 1, 14)
             else:
                 worksheet.set_column(1, len(df.columns) - 1, 10)
-
-        ### Basic configurations
-        fmt = self.format.cells['database']
-        fmt['data']['num_format'] = num_format
-        worksheet.hide_gridlines(2)
 
         ### Writing
         # Write data cells with appropriate formats
@@ -91,14 +93,15 @@ class ExcelFormatter:
     def apply_text_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str):
         """Applies formatting only to cells with data."""
 
-        ### Widths and heights
-        worksheet.set_column('A:A', 27)
-        worksheet.set_column('B:B', 57)
-        worksheet.set_row(0, 29)
-
         ### Basic configurations
         worksheet.hide_gridlines(2)
         fmt = self.format.cells['text_table']
+
+        ### Widths and heights
+        for column, width in fmt["column_widths"].items():
+            worksheet.set_column(column, width)
+        worksheet.set_row(0, 29)
+
 
         ### Writing
         # Write headers with header format
@@ -128,11 +131,18 @@ class ExcelFormatter:
     def apply_data_table_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, highlighted_categories: str | list = ""):
         """Applies formatting to data tables"""
 
+        ### Basic configurations
+        worksheet.hide_gridlines(2)
+        fmt = self.format.cells['data_table']
+        fmt['data']['num_format'] = num_format
+
         if isinstance(highlighted_categories, str):
             highlighted_categories = [highlighted_categories]
+
         ### Widths and heights
         # First column width
-        worksheet.set_column('A:A', 12)  # Ancho fijo para nombres
+        for column, width in fmt["column_widths"].items():
+            worksheet.set_column(column, width)
         
         # Columnas restantes (años y Var (%))
         num_columns = df.shape[1] - 1 
@@ -158,10 +168,6 @@ class ExcelFormatter:
             else:
                 worksheet.set_row(row_idx, 26) # consider 30
 
-        ### Basic configurations
-        worksheet.hide_gridlines(2)
-        fmt = self.format.cells['data_table']
-        fmt['data']['num_format'] = num_format
 
         ### Writing data
         highlighted_row = False
@@ -205,16 +211,15 @@ class ExcelFormatter:
 
 
     def apply_index_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str = ""):
-        # Set column widths
-        worksheet.set_column('A:A', 10)
-        worksheet.set_column('B:C', 40)
-        worksheet.set_column('D:D', 15)
-        worksheet.set_column('E:G', 25)
-        #worksheet.set_column('G:G', 20)
 
         ### Basic configurations
         worksheet.hide_gridlines(2)
         fmt = self.format.cells['index']
+
+        # Set column widths
+        for column, width in fmt["column_widths"].items():
+            worksheet.set_column(column, width)
+                #worksheet.set_column('G:G', 20)
 
         ### Writing
         # Write headers with header format
@@ -240,5 +245,22 @@ class ExcelFormatter:
 
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
     
-    
+
+    def apply_report_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, ):
+        """Applies formatting only to cells with data."""
+
+        ### Basic configurations
+        fmt = self.format.cells['report']
+        worksheet.hide_gridlines(2)
+
+        ### Widths and heights
+        for column, width in fmt["column_widths"].items():
+            worksheet.set_column(column, width)
+
+        if len(df.columns) > 1:
+            if len(str(df.columns[1])) > 11:
+                worksheet.set_column(1, len(df.columns) - 1, 14)
+            else:
+                worksheet.set_column(1, len(df.columns) - 1, 10)
+
 

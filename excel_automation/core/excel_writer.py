@@ -17,10 +17,10 @@ class ExcelWriterXL:
         ----------
         df_list : list[pd.DataFrame]
             List of pandas DataFrames to be written to the Excel file
-        output_name : str
-            Name of the output Excel file without extension
-        output_folder : str
-            Subfolder inside the "products" directory where the file will be saved
+        output_name : str: 
+            Name for the output file (extension already provided)
+        output_folder : str:
+            Folder path to save the file in.
             
         Attributes
         ----------
@@ -56,8 +56,9 @@ class ExcelWriterXL:
         df: pd.DataFrame, 
         sheet_name: str, 
         num_format: str, 
-        format_template: Literal["database", "index", "data_table", "text_table"] | None = "database",
-        highlighted_categories: str | list = ""
+        format_template: Literal["database", "index", "data_table", "text_table", "report"] | None = "database",
+        highlighted_categories: str | list = "",
+        **kwargs
     ) -> Tuple[pd.DataFrame, Worksheet]:
         """
         Write a DataFrame to a specific worksheet with the specified formatting template.
@@ -77,6 +78,10 @@ class ExcelWriterXL:
             - "data_table": Format optimized for numeric data tables
             - "text_table": Format optimized for text-heavy tables
             - None: No formatting applied, uses pandas default
+        **kwargs : dict, optional
+            Additional arguments for specific templates:
+            - For "report": config_dict (dict): Report configuration settings
+        
             
         Returns
         -------
@@ -94,6 +99,8 @@ class ExcelWriterXL:
             self.formatter.apply_text_table_format(worksheet, df, num_format)    
         elif format_template == "index":
             self.formatter.apply_index_format(worksheet, df, num_format)
+        elif format_template == "index":
+            self.formatter.apply_report_format(worksheet, df, num_format, **kwargs) 
         else:
             df.to_excel(self.writer, sheet_name=sheet_name, index=False)
         

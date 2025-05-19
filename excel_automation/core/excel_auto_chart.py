@@ -18,9 +18,9 @@ class ExcelAutoChart:
         df_list : list(pd.DataFrame):
             Data that will be written to Excel
         output_name : str: 
-            File name for the output file.
+            Name for the output file (extension already provided)
         output_folder : str:
-            Folder name inside "products" to save the file in.
+            Folder path to save the file in.
         """
         self.df_list = df_list
         self.writer = ExcelWriterXL(df_list, output_name, output_folder)
@@ -174,6 +174,7 @@ class ExcelAutoChart:
     
         # Add data series with color scheme
         for idx, col in enumerate(df.columns[1:]):
+            num_format = "# ### ##" + num_format if df.iloc[0, idx] else num_format
             col_letter = chr(66 + idx)  # Get column letter (e.g., B, C, D, ...)
             current_color = str(next(color_cycle))
 
@@ -473,34 +474,40 @@ class ExcelAutoChart:
             chart.set_size(configs["size"])
 
         # Add data series with color scheme
-        for idx, col in enumerate(df.columns[1:]): # Saltamos la primera columna (categorías), recorre las columnas
-            col_idx = idx + 1  
-            #value_data = (df[col] != 0).all()
+        for idx, col in enumerate(df.columns[1:]):
+            col_idx = idx + 1
             current_color = next(color_cycle)
-
+            
             points = []
-            if highlighted_category is not None:
-                for row_idx in range(df.shape[0]):
+            for row_idx in range(df.shape[0]):
+                cell_value = df.iloc[row_idx, col_idx]
+                point_format = {}
+                
+                # Configuración del color (tu lógica original)
+                if highlighted_category is not None:
                     category_value = df.iloc[row_idx, 0]
-                    if category_value == highlighted_category:
-                        points.append({'fill': {'color': Color.RED_DARK}})
-                    else:
-                        points.append({'fill': {'color': current_color}})
-                    
-            # fmt_modified = copy.deepcopy(fmt["data"])
-            #     try:
-            #         if int(cell_value) > 9999:
-            #             fmt_modified['num_format'] = "# ### ##" + num_format
-            #     except ValueError:
-            #         pass
-                    
+                    point_format['fill'] = {
+                        'color': Color.RED_DARK if category_value == highlighted_category else current_color
+                    }
+                
+                # Configuración especial para valores > 9999
+                try:
+                    if float(cell_value) > 9999:
+                        point_format['data_labels'] = {
+                            'num_format': '#,##0'  # O tu formato personalizado
+                        }
+                except (ValueError, TypeError):
+                    pass
+                
+                points.append(point_format)
+            
             series_params = {
                 **configs['series'],
                 'name': [sheet_name, 0, col_idx],
-                'values': [sheet_name, 1, col_idx, len(df), col_idx],  
-                'categories': [sheet_name, 1, 0, len(df), 0],  # Categorías en la primera columna 
+                'values': [sheet_name, 1, col_idx, len(df), col_idx],
+                'categories': [sheet_name, 1, 0, len(df), 0],
                 'fill': {'color': current_color},
-                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format, 'value': True},
+                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format},
                 'points': points
             }
             chart.add_series(series_params)
@@ -528,7 +535,6 @@ class ExcelAutoChart:
         worksheet.insert_chart(position, chart, {'x_offset': 25, 'y_offset': 10})
         
         print(f"✅ Gráfico de barras agregado en la hoja '{sheet_name}'")
-        self.sheet_count += 1
         return worksheet 
 
     # TODO: Padding around max and min values so that error bars do not cut
@@ -743,7 +749,8 @@ class ExcelAutoChart:
         sheet_name: str = "",
         template: Literal["database", "index", "data_table", "text_table"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
-        highlighted_categories: str | list = ""
+        highlighted_categories: str | list = "",
+        **kwargs
     ) -> Worksheet:
         """
         Generates a table in an Excel worksheet based on a DataFrame from the given list of DataFrames.
@@ -756,13 +763,21 @@ class ExcelAutoChart:
         sheet_name : str, optional
             Set a name for a worksheet, else name will be dynamically generated like 'Tab#'.
         template : {'database', 'index', 'data_table', 'text_table'}, optional
-            The type of chart template to apply to the table (default is 'text_table').
+            Template style to apply to the worksheet, defaults to "database"
+            - "database": Standard format for database-like data (with numbers)
+            - "index": Format optimized for index-like sheets or summaries.
+            - "data_table": Format optimized for numeric data tables
+            - "text_table": Format optimized for text-heavy tables
+            - None: No formatting applied, uses pandas default
         numeric_type : {'decimal_1', 'decimal_2', 'integer', 'percentage'}, optional
             The numeric format for the values in the table (default is 'decimal_1').
         highlighted_category : str, optional
             A category value from the first column that will determine row highlighting.
             If a row's first column matches this value, the entire row will be formatted
             with a different color (default is an empty string, meaning no highlighting).
+        **kwargs : dict, optional
+            Additional arguments for specific templates:
+            - For "report": config_dict (dict): Report configuration settings
 
         Returns
         -------
@@ -777,7 +792,7 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
-        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, template, highlighted_categories)
+        data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, template, highlighted_categories, **kwargs)
 
         # Check if the DataFrame is empty
         if data_df.empty:
@@ -789,5 +804,7 @@ class ExcelAutoChart:
         print(f"✅ Tabla agregada en la hoja '{sheet_name}'")
         return worksheet
 
+
     def save_workbook(self):
         self.writer.save_workbook()
+    

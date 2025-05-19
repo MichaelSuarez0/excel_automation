@@ -165,10 +165,17 @@ class ExcelDataExtractor():
         if isinstance(selected_categories, str):
             selected_categories = [selected_categories]
         
+        # Normalize items in selected_categories to str
+        try:
+            selected_categories = [str(category) for category in selected_categories]
+        except (TypeError, AttributeError):
+            raise TypeError("At least one of the elements in selected_categories is not a str or cannot be converted to str")
+        
         filtered_dfs = []
         for df_item in dfs:
             if key == "column":
-                missing_categories = [cat for cat in selected_categories if cat not in df_item.columns[1:]]
+                columns_as_str = [str(col) for col in df_item.columns[1:]]
+                missing_categories = [cat for cat in selected_categories if cat not in columns_as_str]
                 if missing_categories:
                     raise KeyError(
                         f"Column(s) not found in DataFrame, check typing: {missing_categories}. "
@@ -190,12 +197,6 @@ class ExcelDataExtractor():
                     raise KeyError(f"No columns in {selected_categories} matched.")
                     
             elif key == "row":
-                # Filtrar y mantener el orden exacto de selected_categories
-                # ordered_categories = [cat for cat in selected_categories 
-                #                     if cat in df_item.iloc[:, 0].values]
-                
-                # if not ordered_categories and not filter_out:
-                #     raise KeyError(f"No rows matched: {selected_categories}")
                 missing_categories = [cat for cat in selected_categories if cat not in df_item.iloc[:, 0].values]
                 if missing_categories:
                     raise KeyError(

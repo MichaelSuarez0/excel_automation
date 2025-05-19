@@ -31,14 +31,14 @@ class Formats():
         return NumericTypes().numeric_types
 
     @cached_property
-    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table', 'report'], dict[Literal['header', 'first_column', 'data'], CellConfig]]:
+    def cells(self) -> dict[Literal['database', 'index', 'data_table', 'text_table', 'report'], dict[Literal['header', 'first_column', 'data', 'column_widths'], CellConfig]]:
         return CellFormats().cells
 
     @cached_property
     def charts(self) -> dict[
         Literal[
             'basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 
-            'bar', 'cleveland_dot',
+            'bar', 'bar_single', 'cleveland_dot',
             # 'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
@@ -62,7 +62,7 @@ class CellFormats:
     @cached_property
     def cells(self) -> dict[
         Literal['database', 'data_table', 'text_table', 'index', 'report'], 
-        dict[Literal['header', 'first_column', 'data'], CellConfig]]:
+        dict[Literal['header', 'first_column', 'data', 'column_widths'], CellConfig]]:
         """Carga y almacena formatos de celdas para hojas que contienen datos (database e index)"""
         white_borders = {
             'border': 1,
@@ -97,6 +97,9 @@ class CellFormats:
                     'border_color': Color.GRAY_LIGHT,
                     'valign': 'vcenter',
                     'font_size': 10
+                },
+                'column_widths':{
+                    'A:A': 12
                 }
             },
             'text_table': {
@@ -124,6 +127,10 @@ class CellFormats:
                     'valign': 'vcenter',
                     'text_wrap': True,
                     'font_size': 10
+                },
+                'column_widths': {
+                    'A:A': 27,
+                    'B:B': 57
                 }
             },
             'data_table': {
@@ -151,6 +158,10 @@ class CellFormats:
                     'align': 'right',
                     'valign': 'vcenter',
                     'font_size': 10
+                },
+                'column_widths':{
+                    'A:A': 12,
+
                 }
             },
             'index': {
@@ -178,7 +189,12 @@ class CellFormats:
                     'valign': 'vcenter',
                     'text_wrap': True,
                     'font_size': 10
-                }
+                },
+                'column_widths':{
+                    'A:A': 10,
+                    'B:C': 40,
+                    'D:D': 15,
+                    'E:G': 25,
             },
             'report': {
                 'header': {
@@ -571,7 +587,7 @@ class ChartFormats:
                 'major_tick_mark': 'none',
                 'major_gridlines': {'visible': False}
             }
-        },
+        }
 
     def _cleveland_dot(self):
         return {
