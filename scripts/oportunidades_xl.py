@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pandas as pd
 from icecream import ic
 from typing import Tuple
@@ -15,9 +15,9 @@ obs = Observatorio()
 obs.load_info_obs_subset(rubro="oportunidades", subrubro="territorial")
 folder_name: str = "oportunidades"
 
-script_dir = os.path.dirname(__file__)
-databases_path = os.path.join(script_dir, "..", "databases", folder_name)
-output_folder = os.path.join(script_dir, "..", "products", "oportunidades")
+SCRIPT_DIR = Path(__file__).parent.resolve()
+DATABASES_PATH = SCRIPT_DIR.parent / "databases" / folder_name
+OUTPUT_FOLDER = SCRIPT_DIR.parent / "products" / "oportunidades"
 
 
 # =================================================================
@@ -32,10 +32,10 @@ def sustituir_otros(text: str , departamento: str, otro: str):
     return text_template.substitute(Departamento=departamento, Otro=otro)
     
 # TODO: Resolver problema con el ciclo
-def convert_index_info(df: pd.DataFrame, departamento: str, otros: str | Tuple[str] = "") -> pd.DataFrame:
-    df = df[['Nombre', 'Título', 'Fuente', 'Formato número']].copy()
+def sustitute_index_info(df: pd.DataFrame, departamento: str, otros: str | Tuple[str] = "") -> pd.DataFrame:
+    df = df[['Nombre', 'Título', 'Fuente', 'Formato número', 'Referencia']].copy()
     
-    if not otros:  # Caso cuando sólo hay departamento
+    if not otros:  # Caso cuando sólo hay departamentos
         df['Título'] = df['Título'].apply(lambda x: sustituir_departamento(x, departamento))
     else:
         # Convertimos a tupla si es un string
@@ -62,7 +62,7 @@ def brecha_digital_xl():
     regiones = ["Nacional", "Costa", "Sierra", "Selva"]
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
 
     dfs[4].iloc[:, 0] = dfs[4].iloc[:, 0].apply(lambda x: ubg.validate_departamento(str(x), False, ignore_errors=True))
@@ -72,12 +72,13 @@ def brecha_digital_xl():
 
     for dpto in departamentos:
         df_list = dfs.copy()
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(file_name_base, dpto, level="oportunidades")
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
+        
         df_list[4] = excel.filter_data(df_list[4], ["Nacional", dpto])
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="decimal_1", highlighted_category="América del Sur",
                                         template="bar_single")
@@ -95,26 +96,29 @@ def edificaciones_antisismicas_xl():
     # Faltan Lima Metro y Callao
     departamentos = ["Lima", "Tacna", "Moquegua", "Arequipa", "Ica", "La Libertad", "Tumbes", "Apurímac",
                       "Lambayeque", "Áncash", "Piura", ]
-    code = "o5_{}"
     file_name_base = "Mayor construcción de edificaciones antisísmicas"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
-    dfs = excel.worksheets_to_dataframes(False)
-    dfs = excel.normalize_orientation(dfs)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
+    dfs = excel.worksheets_to_dataframes()
+    dfs[1:3] = excel.normalize_orientation(dfs[1:3])
 
     for dpto in departamentos:
         df_list = dfs.copy()
-        code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
-        df_list[0] = excel.filter_data(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(file_name_base, dpto, level="oportunidades")
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
+        
         df_list[1] = excel.filter_data(df_list[1], dpto)
-        df_list[0] = excel.concat_dataframes(df_list[0], df_list[1], "Temblores menores", "Temblores mayores")
-        df_list[0] = df_list[0].replace("-", 0)
+        df_list[2] = excel.filter_data(df_list[2], dpto)
+        # MOSTRAR COLUMNAS DISPONIBLES
+        df_list[1] = excel.concat_dataframes(df_list[1], df_list[1], "Temblores menores", "Temblores mayores")
+        df_list[1] = df_list[1].replace("-", 1)
 
         #Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
-        chart_creator.create_column_chart(index=0, sheet_name="Fig1", grouping="stacked", numeric_type="integer", template="column", axis_title="Unidades")
-        chart_creator.create_table(index=2, sheet_name="Tab1")
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
+        chart_creator.create_table(index=0, sheet_name="Index", template='index')
+        chart_creator.create_column_chart(index=1, sheet_name="Fig1", grouping="stacked", numeric_type="integer", template="column")
+        chart_creator.create_table(index=2, sheet_name="Tab1", template="text_table")
         chart_creator.save_workbook()
 
 
@@ -131,14 +135,14 @@ def infraestructura_vial_xl():
     file_name_base = "Mejoramiento de la infraestructura vial y ferroviaria"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
 
     for dpto in departamentos:
         df_list = dfs.copy()
         dpto= [dpto]
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
 
         ## Tab 1
         for id, df in enumerate(df_list[5:], start=5):
@@ -174,7 +178,7 @@ def infraestructura_vial_xl():
         df_list[3] = df_list[3].sort_values(by = "Longitud (km)", ascending= True)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_table(index=5, sheet_name="Tab1", template="data_table", numeric_type="integer")
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", grouping="standard", numeric_type="percentage", template="bar")
@@ -192,8 +196,8 @@ def reforzamiento_programas_sociales_xl():
     file_name_base = "Reforzamiento y ampliación de programas sociales adscritos a los gobiernos regionales"
 
     # Global ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
-    dfs = excel.worksheets_to_dataframes(True)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
+    dfs = excel.worksheets_to_dataframes()
     dfs[1:-1] = excel.normalize_orientation(dfs[1:-1])
 
     for dpto in departamentos:
@@ -202,7 +206,7 @@ def reforzamiento_programas_sociales_xl():
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
 
         # ETL
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         df_list[1] = excel.filter_data(df_list[1], departamentos1)
         df_list[2] = excel.filter_data(df_list[2], dpto)
         df_list[3] = excel.filter_data(df_list[3], dpto)
@@ -213,7 +217,7 @@ def reforzamiento_programas_sociales_xl():
         df_list[2].iloc[:, 1:] = df_list[2].iloc[:, 1:].round(2)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", template="line_simple")
         chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="standard", numeric_type="decimal_1", template="column", axis_title="Millones de soles")
@@ -230,20 +234,20 @@ def uso_tecnologia_educacion_xl():
     colors = [Color.BLUE_DARK, Color.RED_DARK, Color.GREEN_DARK, Color.ORANGE, Color.PURPLE, Color.BLUE]
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
-    dfs = excel.worksheets_to_dataframes(True)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
+    dfs = excel.worksheets_to_dataframes()
     dfs[1] = excel.normalize_orientation(dfs[1])
     dfs[3] = excel.normalize_orientation(dfs[3])
 
     for dpto in departamentos:
         df_list = dfs.copy()
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         df_list[3] = excel.filter_data(df_list[3], dpto)
         df_list[3].iloc[:,1] = df_list[3].iloc[:,1]/100_000_000
 
          # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", template="line", axis_title="Porcentaje (%)", custom_colors=colors)
         chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="decimal_2", template="bar_single", highlighted_category="Peru")  # Cambiar a columna
@@ -267,15 +271,15 @@ def aprovechamiento_ruta_seda():
     file_name_base = "Aprovechamiento de la franja y ruta de la seda"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
-    dfs = excel.worksheets_to_dataframes(True)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
+    dfs = excel.worksheets_to_dataframes()
 
     for dpto in departamentos:
         df_list = dfs.copy()    
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
         plomo = True
 
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         df_list[1] = df_list[1].iloc[:-2,:]
         df_list[1] = excel.filter_data(df_list[1], [2016], True, "column")
         df_list[2] = excel.filter_data(df_list[2], dpto, key="column")
@@ -288,7 +292,7 @@ def aprovechamiento_ruta_seda():
             pass
 
         # # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_table(index=1, sheet_name="Tab1", numeric_type="decimal_1", template='data_table')
         chart_creator.create_line_chart(index=2, sheet_name="Fig1", numeric_type="decimal_2", template="line_monthly", custom_colors=[Color.ORANGE])
@@ -310,20 +314,20 @@ def uso_masivo_telecomunicaciones_xl():
     code = "o99_{}"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
 
     for dpto in departamentos:
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
         df_list = dfs.copy()
         
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         df_list[3] = excel.normalize_orientation(df_list[3])
         df_list[3] = excel.filter_data(df_list[3], [dpto, "Total"])
         df_list[4] = excel.filter_data(df_list[4], años)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", template="line_single")
         chart_creator.create_column_chart(index=2, sheet_name="Fig2", grouping="percentStacked", numeric_type="percentage", template="column_stacked")
@@ -343,14 +347,14 @@ def bellezas_naturales_xl():
     code = "o10_{}"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
 
     for dpto in departamentos1:
         df_list = dfs.copy()
         lugares = cycle(lugares)
         ic(df_list[0])
-        df_list[0] = convert_index_info(df_list[0], dpto, next(lugares))
+        df_list[0] = sustitute_index_info(df_list[0], dpto, next(lugares))
         df_list[-2] = excel.filter_data(df_list[-2], "Total")
         df_list[-1] = excel.filter_data(df_list[-1], "Total")
         ic(df_list[0]["Título"])
@@ -358,7 +362,7 @@ def bellezas_naturales_xl():
         file_name = f"{code_clean} - {file_name_base}"
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", grouping="standard", highlighted_category=dpto, template="bar_single")
         chart_creator.create_line_chart(index=-2, sheet_name="Fig2", numeric_type="integer", axis_title="Visitantes", template="line_monthly", custom_colors=[Color.GREEN_DARK])
@@ -383,7 +387,7 @@ def transicion_energias_renovables_xl():
     file_name_base = "Transición regulada a energías renovables"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     # dfs[1] = excel.filter_data(dfs[1], energias, filter_out=True)
     # dfs[1] = excel.filter_data(dfs[1], años, key="row")
@@ -392,14 +396,14 @@ def transicion_energias_renovables_xl():
 
     for dpto in departamentos:
         df_list = dfs.copy()
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
 
         df_list[3] = excel.filter_data(df_list[3], dpto, key="row")
         df_list[3] = excel.normalize_orientation(df_list[3])
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         # chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="decimal_2", 
         #                                 custom_colors=[Color.RED, Color.BLUE_DARK, Color.GREEN_DARK], chart_template="line")
@@ -418,7 +422,7 @@ def demanda_productos_organicos_xl():
     file_name_base = "Mayor demanda de productos orgánicos"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     dfs[1] = excel.filter_data(dfs[1], "Área total", filter_out=True)
     dfs[3].iloc[:,1] = dfs[3].iloc[:,1].apply(lambda x: x.capitalize())
@@ -441,16 +445,16 @@ def demanda_productos_organicos_xl():
         if dpto != "Madre de Dios":
             try:
                 df_list[3] = excel.filter_data(df_list[3], productos[0], key="row")
-                df_list[0] = convert_index_info(df_list[0], dpto, (productos[0]))
+                df_list[0] = sustitute_index_info(df_list[0], dpto, (productos[0]))
             except KeyError:
                 df_list[3] = excel.filter_data(df_list[3], productos[1], key="row")
-                df_list[0] = convert_index_info(df_list[0], dpto, (productos[1]))
+                df_list[0] = sustitute_index_info(df_list[0], dpto, (productos[1]))
             df_list[3] = df_list[3].drop(df_list[3].columns[0], axis=1)
             df_list[3] = df_list[3].groupby("Pais")["Valor FOB (Miles US$)"].sum().reset_index()
             df_list[3] = df_list[3].sort_values(by="Valor FOB (Miles US$)", ascending=True)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
         chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="bar", custom_colors=[Color.YELLOW, Color.GREEN_DARK])
@@ -469,14 +473,14 @@ def uso_tecnologia_salud_xl():
     años.append(2023)
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     dfs[1] = excel.filter_data(dfs[1], años, key="row")
     dfs[1] = excel.filter_data(dfs[1], "Reino Unido", key="column", filter_out=True)
     
     for dpto in departamentos:
         df_list = dfs.copy()
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
         code_clean = code.format(Departamentos.get_dpto_from_prefix(dpto))
         df_list[2] = excel.filter_data(df_list[2], dpto, key="row")
         df_list[2] = excel.normalize_orientation(df_list[2])
@@ -485,7 +489,7 @@ def uso_tecnologia_salud_xl():
         df_list[4] = df_list[4].iloc[:, 1:]
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", template="line", custom_colors=[
             Color.RED, Color.ORANGE, Color.GREEN_DARK, Color.BLUE_DARK, Color.BLUE])
@@ -502,15 +506,15 @@ def becas_estudiantiles_xl():
     file_name_base = "Ampliación de becas estudiantiles"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     dfs[6] = excel.filter_data(dfs[6], "Total", filter_out=True, key="row")
     dfs[6] = excel.normalize_orientation(dfs[6])
     
     for dpto in departamentos:
         df_list = dfs.copy()
-        df_list[0] = convert_index_info(df_list[0], dpto)
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
 
         #categories = [dpto, "Total", macrorregiones[dpto]]
         #df_list[1] = excel.filter_data(df_list[1], categories, key="row")
@@ -525,7 +529,7 @@ def becas_estudiantiles_xl():
         df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
         
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", chart_template='index')
         chart_creator.create_line_chart(index=1, sheet_name="Fig1", numeric_type="percentage", chart_template="line_simple")
         chart_creator.create_line_chart(index=4, sheet_name="Fig2", numeric_type="percentage", chart_template="line_simple")
@@ -542,7 +546,7 @@ def comunidades_nativas_campesinas():
     file_name_base = "Preservación de conocimientos bioculturales de comunidades nativas y campesinas"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     dfs[1] = excel.filter_data(dfs[1], "Absoluto", key="column")
     dfs[1] = excel.filter_data(dfs[1], "Total", filter_out=True, key="row")
@@ -552,8 +556,8 @@ def comunidades_nativas_campesinas():
     
     for dpto in departamentos:
         df_list = dfs.copy()
-        df_list[0] = convert_index_info(df_list[0], dpto)
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
         
 
         # categories = [dpto, "Total", macrorregiones[dpto]]
@@ -569,7 +573,7 @@ def comunidades_nativas_campesinas():
         # df_list[4] = excel.concat_multiple_dataframes(df_list[2:5], ["Inicial", "Primaria", "Secundaria"])
         
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
         chart_creator.save_workbook()
@@ -581,7 +585,7 @@ def lucha_frontal_corrupcion():
     file_name_base = "Lucha frontal contra la corrupción"
 
     # ETL
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     
     dfs[1] = dfs[1].sort_values(by = "Porcentaje", ascending=True)
@@ -590,11 +594,11 @@ def lucha_frontal_corrupcion():
     
     for dpto in departamentos:
         df_list = dfs.copy()
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base)
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
 
         # Charts
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
         chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="percentage", highlighted_category=dpto, template="bar_single")
         chart_creator.create_bar_chart(index=2, sheet_name="Fig2", numeric_type="integer", highlighted_category=dpto, template="bar_single")
@@ -611,7 +615,7 @@ def plantilla():
     file_name_base = ""
 
     # Se mantiene igual siempre
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     
     # Cambios para todos los departamentos
@@ -623,8 +627,8 @@ def plantilla():
     for dpto in departamentos:
         # Se mantiene igual siempre
         df_list = dfs.copy()
-        code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        code_clean = obs.get_code_from_titulo(file_name_base, dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
 
         # Cambios personalizados para cada departamento:
         df_list[1] = excel.filter_data(df_list[1], dpto, key="row")
@@ -633,7 +637,7 @@ def plantilla():
 
         ### Charts
         # Se mantiene igual siempre
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
 
         # Gráficos personalizados para cada departamento
@@ -651,48 +655,92 @@ def infraestructura_aeroportuaria():
     # Falta Callao
     departamentos = ["Tumbes", "San Martín", "Piura", "Moquegua", "Loreto", "La Libertad", "Huánuco", "Cusco", "Cajamarca", "Amazonas"]
     file_name_base = "Mejoramiento de la infraestructura aeroportuaria"
+    config =  {
+        'column_widths': {
+            'A:A': 15,
+            'B:E': 12,
+            'F:F': 16,
+            'G:H': 13
+            }
+        }
 
     # Se mantiene igual siempre
-    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = databases_path)
+    excel = ExcelDataExtractor(file_name = f"Oportunidad - {file_name_base}", folder_path = DATABASES_PATH)
     dfs = excel.worksheets_to_dataframes()
     
     # Cambios para todos los departamentos
     dfs[1]["Departamento"] = dfs[1]["Departamento"].apply(ubg.validate_departamento)
     dfs[2]["Departamento"] = dfs[2]["Departamento"].apply(ubg.validate_departamento)
-    dfs[1] = excel.filter_data(dfs[1], ["INDICADOR", 2023])
+    dfs[1].columns = [str(column) for column in dfs[1].columns]
+    dfs[1] = excel.filter_data(dfs[1], ["Indicador", 2023])
+    dfs[1] = dfs[1].pivot(
+        index="Departamento",
+        columns="Indicador",
+        values="2023"
+    ).reset_index()
+    dfs[1]["Número de aeródromos"] = dfs[1]["Total de Aeródromos y Aeropuertos"] - dfs[1]["Número de aeropuertos"]
+    dfs[1] = dfs[1].sort_values(by="Número de aeródromos", ascending=True)
+    dfs[1] = excel.filter_data(dfs[1], "Total de Aeródromos y Aeropuertos", filter_out=True)
+
+    dfs[2] = excel.filter_data(dfs[2], "Pasco", filter_out=True)
+
     dfs[3].iloc[:,1] = dfs[3].iloc[:,1].astype(str).str.title()
+    dfs[3] = excel.filter_data(dfs[3], ["FECHA_CORTE", "Jerarquía"], filter_out=True)
+    dfs[3] = dfs[3].sort_values(by="Tipo", ascending=True)
     
     ### Loop
     for dpto in departamentos:
         # Se mantiene igual siempre
         df_list = dfs.copy()
         code_clean = obs.get_code_from_titulo(dpto, file_name_base, level="oportunidades")
-        df_list[0] = convert_index_info(df_list[0], dpto)
+        df_list[0] = sustitute_index_info(df_list[0], dpto)
 
         # Cambios personalizados para cada departamento:
         df_list[2] = excel.filter_data(df_list[2], dpto, key="row")
         df_list[2] = df_list[2].drop("Departamento", axis=1)
         df_list[2] = excel.normalize_orientation(df_list[2])
-
+        df_list[2] = excel.filter_data(df_list[2], "Arribo de pasajeros nacionales a aeropuertos y aeródromos", filter_out=True)
         df_list[3] = excel.filter_data(df_list[3], dpto, key="row")
         df_list[3] = df_list[3].drop("Departamento", axis=1)
 
-
         ### Charts
         # Se mantiene igual siempre
-        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", os.path.join(output_folder, file_name_base))
+        chart_creator = ExcelAutoChart(df_list, f"{code_clean} - {file_name_base}", OUTPUT_FOLDER / file_name_base)
         chart_creator.create_table(index=0, sheet_name="Index", template='index')
 
         # Gráficos personalizados para cada departamento
-        chart_creator.create_bar_chart(index=1, sheet_name="Fig1", numeric_type="integer", highlighted_category=dpto, template="bar_single")
-        chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="line_simple")
-        chart_creator.create_table(index=3, sheet_name="Tab1", template="data_table")
+        chart_creator.create_bar_chart(index=1, grouping="stacked", numeric_type="integer", highlighted_category=dpto, custom_colors=[Color.BLUE_LIGHT, Color.BLUE_DARK], template="bar_single")
+        chart_creator.create_line_chart(index=2, sheet_name="Fig2", numeric_type="integer", template="line")
+        chart_creator.create_table(index=3, sheet_name="Tab1", template="report", config=config)
         chart_creator.create_table(index=4, sheet_name="Tab2", template="text_table")
 
         # Se mantiene
         chart_creator.save_workbook()
 
 
+
+def test_dot_plot():
+    # Insertar aquí los departamentos y nombre de la temática
+    departamentos = []
+    file_name_base = "test_dot_plot"
+
+    # Se mantiene igual siempre
+    excel = ExcelDataExtractor(file_name_base, folder_path = DATABASES_PATH)
+    dfs = excel.worksheets_to_dataframes(False)
+    
+    ### Charts
+    # Se mantiene igual siempre
+    chart_creator = ExcelAutoChart(dfs, f"{file_name_base}_final", OUTPUT_FOLDER / file_name_base)
+
+    # Gráficos personalizados para cada departamento
+    chart_creator.create_dot_chart(0, sheet_name="Fig#", numeric_type="integer", template="cleveland_dot")
+
+    # Se mantiene
+    chart_creator.save_workbook()
+
+
+
+# TODO: Las rutas deben ser con Pathlib para que no aparezca /../
 # TODO: Un logging para cada save
 # TODO: ExcelAutoChart podría tener una variable local para contar el número de Fig y asignarles automáticamente un nombre a los sheets
 if __name__ == "__main__":
@@ -711,4 +759,5 @@ if __name__ == "__main__":
     #comunidades_nativas_campesinas()
     #lucha_frontal_corrupcion()
     infraestructura_aeroportuaria()
+    #test_dot_plot()
     
