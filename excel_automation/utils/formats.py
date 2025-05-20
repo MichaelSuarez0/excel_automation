@@ -73,28 +73,40 @@ class CellFormats:
             'border': 1,
             'border_color': Color.GRAY,
         }
+        gray_light_borders = {
+            'border': 1,
+            'border_color': Color.GRAY_LIGHT,
+        }
+
+        first_column_basic = {
+            **white_borders,
+            'bg_color': Color.GRAY_LIGHT,
+            'text_wrap': True,
+            'valign': 'vcenter',
+            'font_size': 10
+        }
+
+        header_basic = {
+            **white_borders,
+            'bg_color': Color.BLUE_DARK,
+            'font_color': Color.WHITE,
+            'bold': True,
+            'align': 'center',
+            'valign': 'vcenter',
+            'text_wrap': True,
+        }
 
         return { 
             'database': {
                 'header': {
-                    **white_borders,
-                    'bg_color': Color.BLUE_DARK,
-                    'font_color': Color.WHITE,
-                    'bold': True,
-                    'align': 'center',
-                    'valign': 'vcenter',
-                    'text_wrap': True,
+                    **header_basic,
                     'font_size': 10
                 },
                 'first_column': {
-                    **white_borders,
-                    'bg_color': Color.GRAY_LIGHT,
-                    'text_wrap': True,
-                    'font_size': 10
+                    **first_column_basic
                 },
                 'data': {
-                    'border': 1,
-                    'border_color': Color.GRAY_LIGHT,
+                    **gray_light_borders,
                     'valign': 'vcenter',
                     'font_size': 10
                 },
@@ -104,22 +116,12 @@ class CellFormats:
             },
             'text_table': {
                 'header': {
-                    **white_borders,
-                    'bg_color': Color.BLUE_DARK,
-                    'font_color': Color.WHITE,
-                    'bold': True,
-                    'align': 'center',
-                    'valign': 'vcenter',
-                    'text_wrap': True,
+                    **header_basic,
                     'font_size': 11
                 },
                 'first_column': {
-                    **gray_borders,
-                    'bg_color': Color.GRAY_LIGHT,
-                    'valign': 'vcenter',
+                    **first_column_basic,
                     'align': 'justify',
-                    'text_wrap': True,
-                    'font_size': 10
                 },
                 'data': {
                     **gray_borders,
@@ -135,28 +137,19 @@ class CellFormats:
             },
             'data_table': {
                 'header': {
-                    **white_borders,
-                    'bg_color': Color.BLUE_DARK,
-                    'font_color': Color.WHITE,
-                    'bold': True,
-                    'align': 'center',
-                    'valign': 'vcenter',
-                    'text_wrap': True,
+                    **header_basic,
                     'font_size': 10
                 },
                 'first_column': {
-                    **white_borders,
-                    'bg_color': Color.GRAY_LIGHT,
-                    'text_wrap': True,
-                    'align': 'center',
-                    'valign': 'vcenter',
-                    'font_size': 10
+                    **first_column_basic,
+                    'align': 'center'
                 },
                 'data': {
                     'border': 1,
                     'border_color': Color.GRAY_LIGHT,
                     'align': 'right',
                     'valign': 'vcenter',
+                    'text_wrap': True,
                     'font_size': 10
                 },
                 'column_widths':{
@@ -166,22 +159,12 @@ class CellFormats:
             },
             'index': {
                 'header': {
-                    **white_borders,
-                    'bg_color': Color.BLUE_DARK,
-                    'font_color': Color.WHITE,
-                    'bold': True,
-                    'align': 'center',
-                    'valign': 'vcenter',
-                    'text_wrap': True,
+                    **header_basic,
                     'font_size': 10
                 },
                 'first_column': {
-                    **gray_borders,
-                    'bg_color': Color.GRAY_LIGHT,
-                    'valign': 'vcenter',
-                    'align': 'justify',
-                    'text_wrap': True,
-                    'font_size': 10
+                    **first_column_basic,
+                    'align': 'justify'
                 },
                 'data': {
                     **gray_borders,
@@ -194,20 +177,29 @@ class CellFormats:
                     'A:A': 10,
                     'B:C': 40,
                     'D:D': 15,
-                    'E:G': 25,
+                    'E:G': 35
+                },
             },
             'report': {
                 'header': {
-                    'bold': True,
-                    'valign': 'vcenter',
-                    'text_wrap': False,
-                    'font_size': 14
+                    **header_basic,
+                    'font_size': 11
                 },
                 'data': {
+                    **gray_light_borders,
+                    'valign': 'vcenter',
+                    'font_size': 10,
+                    'text_wrap': True,
+                },
+                'first_column': {
+                    **white_borders,
+                    'bg_color': Color.GRAY_LIGHT,
+                    'text_wrap': True,
+                    'align': 'center',
                     'valign': 'vcenter',
                     'font_size': 10
                 }
-            },
+            }
         }
 
 # TODO: Test with column widths
