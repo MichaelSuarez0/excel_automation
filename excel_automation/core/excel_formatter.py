@@ -211,7 +211,6 @@ class ExcelFormatter:
 
 
     def apply_index_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str = ""):
-
         ### Basic configurations
         worksheet.hide_gridlines(2)
         fmt = self.format.cells['index']
@@ -246,21 +245,38 @@ class ExcelFormatter:
                 worksheet.write(row_idx + 1, col_idx, cell_value, cell_format)
     
 
-    def apply_report_format(self, worksheet: Worksheet, df: pd.DataFrame, num_format: str, ):
+    def apply_report_format(self, worksheet: Worksheet, df: pd.DataFrame, **kwargs):
         """Applies formatting only to cells with data."""
 
         ### Basic configurations
         fmt = self.format.cells['report']
+        fmt.update(kwargs.get("config"))
         worksheet.hide_gridlines(2)
 
         ### Widths and heights
         for column, width in fmt["column_widths"].items():
             worksheet.set_column(column, width)
+        
+        ### Writing data
+        for row_idx in range(df.shape[0]):
+            cell_value = df.iloc[row_idx, 0]
 
-        if len(df.columns) > 1:
-            if len(str(df.columns[1])) > 11:
-                worksheet.set_column(1, len(df.columns) - 1, 14)
-            else:
-                worksheet.set_column(1, len(df.columns) - 1, 10)
+            # First column (e.g., dates or text)
+            worksheet.write(row_idx + 1, 0, cell_value, self.workbook.add_format(fmt['first_column']))
+
+            # Rest of columns (numeric data)
+            for col_idx in range(1, df.shape[1]):
+                cell_value = df.iloc[row_idx, col_idx]
+                worksheet.write(row_idx + 1, col_idx, cell_value, self.workbook.add_format(fmt["data"]))
+
+        # Headers
+        for col_num, col_name in enumerate(df.columns):
+            worksheet.write(0, col_num, col_name, self.workbook.add_format(fmt["header"]))
+
+        # if len(df.columns) > 1:
+        #     if len(str(df.columns[1])) > 11:
+        #         worksheet.set_column(1, len(df.columns) - 1, 14)
+        #     else:
+        #         worksheet.set_column(1, len(df.columns) - 1, 10)
 
 
