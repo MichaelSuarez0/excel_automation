@@ -46,8 +46,8 @@ class ExcelAutoChart:
         "Returns legend, plot_area, sp_axis_num_format, num_font"
         plot_area = copy.deepcopy(self.format.charts["basic"]["plotarea"])
         legend = copy.deepcopy(self.format.charts["basic"]["legend"])
-        first_col_max_value = max([len(str(value)) for value in df.iloc[:,0]])
-        high_len = first_col_max_value > 5
+        first_col_max_len = max([len(str(value)) for value in df.iloc[:,0]])
+        high_len = first_col_max_len > 5
         columns = df.shape[1] - 1
 
         if columns == 1:
@@ -64,26 +64,28 @@ class ExcelAutoChart:
             #         }
             #     }
 
-        metric = "height" if not bar else "x"
-
-        if not bar:  # If not bar, perform the subtraction
+        if not bar:  # If not bar, reduce height based on len of categories
             if high_len:
-                plot_area["layout"][metric] -= 0.05
-            if first_col_max_value >= 9:
-                plot_area["layout"][metric] -= 0.04
-            if first_col_max_value >= 13:
-                plot_area["layout"][metric] -= 0.03
-            if first_col_max_value >= 16:
-                plot_area["layout"][metric] -= 0.03
-        else:  
+                plot_area["layout"]["height"] -= 0.05
+            if first_col_max_len >= 9:
+                plot_area["layout"]["height"] -= 0.04
+            if first_col_max_len >= 13:
+                plot_area["layout"]["height"] -= 0.03
+            if first_col_max_len >= 16:
+                plot_area["layout"]["height"] -= 0.03
+        else:   # If bar, reduce width and increase space for x axis based on len of categories
             if high_len:
-                plot_area["layout"][metric] += 0.05
-            if first_col_max_value >= 9:
-                plot_area["layout"][metric] += 0.04
-            if first_col_max_value >= 13:
-                plot_area["layout"][metric] += 0.03
-            if first_col_max_value >= 16:
-                plot_area["layout"][metric] -= 0.03
+                plot_area["layout"]["x"] += 0.05
+                plot_area["layout"]["width"] -= 0.05
+            if first_col_max_len >= 9:
+                plot_area["layout"]["x"] += 0.04
+                plot_area["layout"]["width"] -= 0.04
+            if first_col_max_len >= 13:
+                plot_area["layout"]["x"] += 0.03
+                plot_area["layout"]["width"] -= 0.03
+            if first_col_max_len >= 16:
+                plot_area["layout"]["x"] -= 0.03
+                plot_area["layout"]["width"] -= 0.03
 
         sp_axis_num_format = '0' if not isinstance(df.iloc[0,0], pd.Timestamp) else 'mmm-yy'
         num_font = {
@@ -387,7 +389,7 @@ class ExcelAutoChart:
         grouping: Literal['standard', 'stacked', 'percentStacked'] = "standard",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_category: str = "",
-        template: Literal['bar', 'bar_single'] = "bar",
+        template: Literal['bar', 'bar_single', 'bar_double'] = "bar",
         axis_title: str = "",
         custom_colors: list[str] | None = None,
     ) -> Worksheet:
@@ -407,7 +409,7 @@ class ExcelAutoChart:
         highlighted_category : str, optional
             Category that will be highlighted with a different color (red).
         template : str, optional
-            Template for the chart configuration: 'bar', or 'bar_single' (default is "bar").
+            Template for the chart configuration: 'bar', 'bar_single' or 'bar_double' (default is "bar").
         axis_title : str, optional
             Title for the axis (default is an empty string).
         custom_colors : list of str or None, optional
@@ -440,7 +442,7 @@ class ExcelAutoChart:
         # Raising errors
         if df.empty:
             raise ValueError("DataFrame is empty. No data to plot.")
-        if template not in {"bar", "bar_single"}:
+        if template not in {"bar", "bar_single", "bar_double"}:
             raise ValueError(f"Invalid template for bar chart: {template}. Expected one of 'bar' or 'bar_single'")
 
         # Map grouping types to xlsxwriter subtypes
@@ -457,11 +459,9 @@ class ExcelAutoChart:
         # Load dynamically modified formats
         legend, plot_area, sp_axis_num_format, num_font = self._configure_dynamic_values(df, bar = True)
 
-        #plot_area["layout"]["x"] += plot_area["layout"]["height"] - self.format.charts["basic"]["plotarea"]["layout"]["height"]
-        plot_area["layout"]["height"] = self.format.charts["basic"]["plotarea"]["layout"]["height"]
-        plot_area["layout"]["height"] += 0.19
-        plot_area["layout"]["width"] -= 0.11
-        plot_area["layout"]["y"] -= 0.01
+        plot_area["layout"]["height"] += 0.12
+        plot_area["layout"]["width"] += 0.04
+        plot_area["layout"]["y"] -= 0.02
         
         if axis_title:
             plot_area["layout"]["x"] += 0.03
@@ -477,7 +477,7 @@ class ExcelAutoChart:
         for idx, col in enumerate(df.columns[1:]):
             col_idx = idx + 1
             current_color = next(color_cycle)
-            
+
             points = []
             for row_idx in range(df.shape[0]):
                 cell_value = df.iloc[row_idx, col_idx]
@@ -486,20 +486,28 @@ class ExcelAutoChart:
                 # Configuración del color (tu lógica original)
                 if highlighted_category is not None:
                     category_value = df.iloc[row_idx, 0]
+                    if category_value == highlighted_category:
+                        color = Color.RED_DARK if col_idx == 1 else Color.RED_LIGHT
+                    else:
+                        color = current_color
+
                     point_format['fill'] = {
-                        'color': Color.RED_DARK if category_value == highlighted_category else current_color
+                        'color': color
                     }
                 
                 # Configuración especial para valores > 9999
                 try:
                     if float(cell_value) > 9999:
                         point_format['data_labels'] = {
-                            'num_format': '#,##0'  # O tu formato personalizado
+                            'num_format': '# ##0'
                         }
                 except (ValueError, TypeError):
                     pass
                 
                 points.append(point_format)
+            
+            data_labels = {**configs['series']['data_labels'], 'num_format': num_format}
+            data_labels.update({'font': {'color': Color.WHITE if col_idx == 1 else Color.BLACK}})
             
             series_params = {
                 **configs['series'],
@@ -507,7 +515,7 @@ class ExcelAutoChart:
                 'values': [sheet_name, 1, col_idx, len(df), col_idx],
                 'categories': [sheet_name, 1, 0, len(df), 0],
                 'fill': {'color': current_color},
-                'data_labels': {**configs['series']['data_labels'], 'num_format': num_format},
+                'data_labels': {data_labels},
                 'points': points
             }
             chart.add_series(series_params)
@@ -747,7 +755,7 @@ class ExcelAutoChart:
         self,
         index: int,
         sheet_name: str = "",
-        template: Literal["database", "index", "data_table", "text_table"] = "text_table",
+        template: Literal["database", "index", "data_table", "text_table", "report"] = "text_table",
         numeric_type: Literal['decimal_1', 'decimal_2', 'integer', 'percentage'] = "decimal_1",
         highlighted_categories: str | list = "",
         **kwargs
@@ -792,6 +800,9 @@ class ExcelAutoChart:
         num_format = self.format.numeric_types[numeric_type]
         
         # Retrieve the DataFrame and the corresponding worksheet
+        if not template == "index":
+            self.tab_counter += 1
+        sheet_name = sheet_name if sheet_name else f"Tab{self.tab_counter}"
         data_df, worksheet = self.writer.write_from_df(self.df_list[index], sheet_name, num_format, template, highlighted_categories, **kwargs)
 
         # Check if the DataFrame is empty
