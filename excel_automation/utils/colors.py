@@ -7,14 +7,15 @@ class Color(str, Enum):
     RED_DARK: str = "#be0000"
     RED: str = '#d41225'
     RED_LIGHT: str = "#FFABAB"
-    BLUE_LIGHT: str = "#6499DA"
+    BLUE_LIGHT: str = "#A6CAEC" 
     BLUE: str = "#0060a4"
-    BLUE_DARK: str = "#00194b"
+    BLUE_DARK: str = "#14213b"
     GREEN_DARK: str = "#007630"
     GREEN_LIGHT: str = "#00B050"
     GRAY_LIGHT: str = "#EBEBEB" # Cell backgrounds and borders
     GRAY_GRIDS: str = "#F2F2F2" # Axis grids (almost imperceptible)
     GRAY: str = "#D2D2D2"       # General use (high contrast)
+    TURQUOISE: str = "#dcffff"
     YELLOW: str = "#FEC200"
     WHITE: str = '#FFFFFF'
     ORANGE: str = "#DD6909"

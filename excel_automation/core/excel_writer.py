@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 import pandas as pd
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
@@ -33,8 +33,8 @@ class ExcelWriterXL:
         df_list : list[pd.DataFrame]
             The list of DataFrames to be written
         """
-        self.output_path = os.path.join(output_folder, f"{output_name}.xlsx")
-        os.makedirs(os.path.dirname(self.output_path), exist_ok=True)
+        self.output_path = Path(output_folder) / f"{output_name}.xlsx"
+        self.output_path.parent.mkdir(parents=True, exist_ok=True)
         self.writer = pd.ExcelWriter(self.output_path, engine='xlsxwriter')
         self.formatter = ExcelFormatter(df_list, self.writer)
         self.format = Formats()
@@ -99,8 +99,8 @@ class ExcelWriterXL:
             self.formatter.apply_text_table_format(worksheet, df, num_format)    
         elif format_template == "index":
             self.formatter.apply_index_format(worksheet, df, num_format)
-        elif format_template == "index":
-            self.formatter.apply_report_format(worksheet, df, num_format, **kwargs) 
+        elif format_template == "report":
+            self.formatter.apply_report_format(worksheet, df, **kwargs) 
         else:
             df.to_excel(self.writer, sheet_name=sheet_name, index=False)
         

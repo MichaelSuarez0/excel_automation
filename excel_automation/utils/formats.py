@@ -38,7 +38,7 @@ class Formats():
     def charts(self) -> dict[
         Literal[
             'basic', 'line', 'line_simple', 'line_single', 'line_monthly', 'column', 'column_simple', 'column_single', 'column_stacked', 
-            'bar', 'bar_single', 'cleveland_dot',
+            'bar', 'bar_single', 'bar_double', 'cleveland_dot',
             # 'marker', 'marker_simple', 'y_axis', 'x_axis'
         ], 
         Any
@@ -274,6 +274,7 @@ class ChartFormats:
             'column_stacked': self._column_stacked(),
             'bar': self._bar(),
             'bar_single': self._bar_single(),
+            'bar_double': self._bar_double(),
             'cleveland_dot': self._cleveland_dot()
         }
 
@@ -569,6 +570,30 @@ class ChartFormats:
                     'font': {
                         'bold': True,
                         'color': Color.BLACK,
+                        'size': 10
+                    }
+                }
+            },
+            'x_axis': {
+                'visible': False,
+                'line': {'none': True},
+                'major_tick_mark': 'none',
+                'major_gridlines': {'visible': False}
+            }
+        }
+    
+    def _bar_double(self):
+        return {
+            'size': {'width': 600, 'height': 450},
+            'colors': self._cleveland_dot_colors,
+            'series': {
+                'gap': 40,
+                'data_labels': {
+                    'value': True,
+                    'position': 'inside_end', # o inside_base
+                    'font': {
+                        'bold': False,
+                        'color': Color.WHITE,
                         'size': 10
                     }
                 }
